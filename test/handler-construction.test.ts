@@ -75,7 +75,7 @@ describe('an index that is not one, at construction', () => {
     );
   });
 
-  it('still loads a function, its JSON text and a remote index on first use', async () => {
+  it('still loads a function and its JSON text on first use', async () => {
     const lazy = createAskHandler({ index: () => serializeIndexFile(keyword), model });
     expect((await lazy(ask())).status).toBe(200);
     const text = createAskHandler({ index: serializeIndexFile(keyword), model });
