@@ -3,6 +3,7 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
+import { warnDeprecated } from '../deprecation';
 import type { LlmsPage } from '../llms';
 import { fromHtml } from '../loaders/html';
 import type { SourceDocument } from '../types';
@@ -41,12 +42,22 @@ export interface BuiltPageOptions {
   id?: string;
   /**
    * The part of the page to read: `main` (the default, then the page's `<article>`s, then its
-   * `<body>`), `article`, or a selector such as `[data-pagefind-body]` or `.vp-doc`, as
-   * `fromHtml` from `ondocs` takes it. With a selector, a page where it matches nothing has no
+   * `<body>`), `article`, or a selector such as `[data-pagefind-body]` or `.vp-doc`, as the
+   * plugins' `contentSelector` takes it. With a selector, a page where it matches nothing has no
    * content.
    */
+  contentSelector?: string;
+  /** What to leave out of `contentSelector`, as a selector, such as `.header-anchor, .toc`. */
+  ignoreSelector?: string;
+  /**
+   * @deprecated Use `contentSelector`, which takes the same selector. `root` still works, with a
+   * warning, until 1.0.
+   */
   root?: string;
-  /** What to leave out of `root`, as a selector, such as `.header-anchor, .toc`. */
+  /**
+   * @deprecated Use `ignoreSelector`, which takes the same selector. `ignore` still works, with a
+   * warning, until 1.0.
+   */
   ignore?: string;
   /**
    * What the framework's `<title>` adds after the page's own title, such as ` | Acme Docs`,
@@ -67,10 +78,17 @@ export interface BuiltPage {
 /**
  * Reads a page a framework built into what the index and the llms files are made of: its
  * content as text to index and, with `markdown`, as Markdown to read. `null` for a page with no
- * content (nothing in `root`, or `<meta name="robots" content="noindex">`), which is not indexed.
+ * content (nothing in `contentSelector`, or `<meta name="robots" content="noindex">`), which is not
+ * indexed.
  */
 export function loadBuiltPage(html: string, options: BuiltPageOptions): BuiltPage | null {
-  const { url, id = url, root, ignore, titleSuffix, markdown = false } = options;
+  const { url, id = url, titleSuffix, markdown = false } = options;
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- their names before 0.14, still read
+  const { root: oldRoot, ignore: oldIgnore } = options;
+  if (oldRoot !== undefined) warnDeprecated("loadBuiltPage's root", 'contentSelector');
+  if (oldIgnore !== undefined) warnDeprecated("loadBuiltPage's ignore", 'ignoreSelector');
+  const root = options.contentSelector ?? oldRoot;
+  const ignore = options.ignoreSelector ?? oldIgnore;
   const meta = { id, url, ...(root ? { root } : {}), ...(ignore ? { ignore } : {}) };
   const read = fromHtml(html, meta);
   if (!read?.content.trim()) return null;

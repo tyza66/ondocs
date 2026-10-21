@@ -25,6 +25,7 @@ Here is the whole integration for an imaginary framework whose plugins get a `cl
 import {
   buildEmbedding,
   checkIndexOptions,
+  checkOptions,
   consoleLogger,
   dialogEndpoint,
   excluder,
@@ -33,6 +34,7 @@ import {
   launcherScript,
   llmsOutputs,
   loadBuiltPage,
+  optionRules,
   readBuiltHtml,
   writeLlmsFiles,
   writeSiteIndex,
@@ -48,7 +50,15 @@ export type OndocsOptions = IndexOptions & {
   llmsTxt?: LlmsTxtOption;
 };
 
+const OPTIONS = optionRules.shape<OndocsOptions>({
+  ...optionRules.index,
+  endpoint: optionRules.string,
+  exclude: optionRules.exclude,
+  llmsTxt: optionRules.llmsTxt,
+});
+
 export default function ondocs(options: OndocsOptions = {}) {
+  checkOptions('ondocs-acme', OPTIONS, options);
   checkIndexOptions(options);
   const log = consoleLogger();
   return {
@@ -66,7 +76,7 @@ export default function ondocs(options: OndocsOptions = {}) {
         if (excluded(route)) continue;
         const html = await readBuiltHtml(outDir, route);
         if (html === undefined) continue;
-        const built = loadBuiltPage(html, { url: route, root: 'main', markdown: true });
+        const built = loadBuiltPage(html, { url: route, contentSelector: 'main', markdown: true });
         if (!built) continue;
         documents.push(built.document);
         if (built.page) pages.push(built.page);
@@ -106,8 +116,8 @@ The plugin's options are `IndexOptions` (`embedding`, `dimensions`, `embeddingMo
 `loadBuiltPage(html, options)` turns it into the document to index and, with `markdown: true`, the page for the llms files. Give it:
 
 - `url`: the URL the site serves the page at, with the base path, as citations will link to it.
-- `root`: the part of the page that is its content. The default, `main`, reads `<main>`, then the page's `<article>`s, then `<body>`. A selector such as `.vp-doc` or `[data-pagefind-body]` reads only what it matches, and a page where it matches nothing is skipped.
-- `ignore`: what to leave out of `root`, such as `.header-anchor, .toc`. Navigation, buttons, forms and footers are left out anyway.
+- `contentSelector`: the part of the page that is its content. The default, `main`, reads `<main>`, then the page's `<article>`s, then `<body>`. A selector such as `.vp-doc` or `[data-pagefind-body]` reads only what it matches, and a page where it matches nothing is skipped. Before 0.14 it was `root`, which still works until 1.0.
+- `ignoreSelector`: what to leave out of `contentSelector`, such as `.header-anchor, .toc`. Navigation, buttons, forms and footers are left out anyway. Before 0.14 it was `ignore`.
 - `titleSuffix`: what the framework adds to each `<title>`, such as `' | Acme Docs'`, taken off a title read from it. A title from the page's `<h1>` has none.
 
 It returns `null` for a page with no content, or with `<meta name="robots" content="noindex">`, and such a page is not indexed. Skip the framework's 404 page yourself. `excluder(options.exclude)` gives the plugins' `exclude` option: path prefixes, each with the paths under it.
@@ -115,6 +125,8 @@ It returns `null` for a page with no content, or with `<meta name="robots" conte
 ## Write the index
 
 `buildEmbedding(options, log)` gives the embedding model the options name, as the other plugins choose it: `embeddingModel` or `embedding` when set, else OpenAI's `text-embedding-3-small` at 512 dimensions when `OPENAI_API_KEY` is set at build time, the same model through AI Gateway when only `AI_GATEWAY_API_KEY` is, and else a keyword-only index, with a warning. A key that is set but cannot be used fails the build. `checkIndexOptions(options)` throws on options that contradict each other; call it where the framework first hands you the options.
+
+Before it, `checkOptions(name, rules, options)` fails on an option that is misspelled, or not one of yours, and names the nearest that is (`embeding is not an option. Did you mean embedding?`), and on a value of the wrong kind. Make the rules with `optionRules.shape`, one rule per option, from `optionRules.index` for the options every plugin takes and the others `optionRules` has, as the minimal integration above does. Both are experimental: they may still change in a minor version before 1.0.
 
 `writeSiteIndex` builds the index and writes it to `file`. `cache` is where it keeps a copy for the next build, so unchanged pages reuse their vectors instead of being embedded again: `indexCache(root, name)` puts it in `node_modules/.cache/ondocs`, which Vercel and Netlify keep between builds. Give each index its own cache file, one per locale or plugin instance. The log line says how many pages and chunks it indexed, and how many it embedded and reused.
 
@@ -151,6 +163,7 @@ The endpoint itself is a function next to the site, as for any other static site
 | `readBuiltHtml`, `loadBuiltPage`             | Read a built page, and turn it into a document to index and a page for the llms files |
 | `excluder`                                   | The `exclude` option: whether a path is under one of its prefixes                     |
 | `checkIndexOptions`, `buildEmbedding`        | Check the index options, and build the embedding model they name                      |
+| `checkOptions`, `optionRules`                | Check the options as the config gives them (experimental)                             |
 | `writeSiteIndex`, `indexCache`               | Write the index, reusing the vectors cached from the previous build                   |
 | `llmsOutputs`, `writeLlmsFiles`              | Read the `llmsTxt` option, and write `llms.txt`, `llms-full.txt` and the `.md` pages  |
 | `launcherScript`, `LAUNCHER_STYLESHEETS`     | The module and the stylesheets that add the launcher to every page                    |

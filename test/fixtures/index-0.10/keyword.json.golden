@@ -1,0 +1,23 @@
+{
+  "format": "ask-my-site/index@1",
+  "contentHash": "66e7025719485a7ba812f5ec274e3124ff0e3dd29a0acbf9d4b28a14170b736e",
+  "chunking": {"maxChars":1200,"overlap":150},
+  "embedding": null,
+  "documents": [
+    {"id":"configuration.md","url":"/docs/configuration","title":"Configuration"},
+    {"id":"deploying.md","url":"/docs/deploying","title":"Deploying"},
+    {"id":"getting-started.md","url":"/docs/getting-started","title":"Getting started"}
+  ],
+  "chunks": [
+    {"id":"configuration.md#0","doc":0,"heading":"","text":"Acme reads `acme.config.ts` in the project's root.","hash":"d8275ad1f83fb4d8"},
+    {"id":"configuration.md#1","doc":0,"heading":"Base path","anchor":"base-path","text":"Set `base` when the site is served under a path, such as `/docs`. Every link and asset is written under it.","hash":"e694036ae2d03d12"},
+    {"id":"configuration.md#2","doc":0,"heading":"Themes","anchor":"themes","text":"`theme` picks the look: `light`, `dark` or `auto`, which follows the visitor's system setting.","hash":"6fc1906bf83d40c4"},
+    {"id":"configuration.md#3","doc":0,"heading":"Redirects","anchor":"redirects","text":"List old paths in `redirects`, each with the page it moved to. Acme writes a small HTML file at the old path that sends visitors on.","hash":"a9a66c696151fef1"},
+    {"id":"deploying.md#0","doc":1,"heading":"","text":"The `out/` folder is plain files, so any static host serves it.","hash":"c1e63ee288e2a6a9"},
+    {"id":"deploying.md#1","doc":1,"heading":"GitHub Pages","anchor":"github-pages","text":"Push `out/` to the `gh-pages` branch, or let a workflow build and publish it on every push to `main`.","hash":"d3d7783230cb446f"},
+    {"id":"deploying.md#2","doc":1,"heading":"Caching","anchor":"caching","text":"Hashed assets can be cached for a year. HTML files should be revalidated on every request, so a deploy shows up at once.","hash":"457e56a4d68dcf4e"},
+    {"id":"getting-started.md#0","doc":2,"heading":"","text":"Acme turns a folder of Markdown into a static site.","hash":"46e3fdef84a44dff"},
+    {"id":"getting-started.md#1","doc":2,"heading":"Install","anchor":"install","text":"Install the CLI with npm:\n\n```sh\nnpm install --save-dev acme-cli\n```\n\nAcme needs Node.js 22 or later.","hash":"4f55216b7da79543"},
+    {"id":"getting-started.md#2","doc":2,"heading":"Your first build","anchor":"your-first-build","text":"Run `npx acme build` in the folder with your pages. The site is written to `out/`, one HTML file per page.","hash":"f98f6b5581e7e069"}
+  ]
+}

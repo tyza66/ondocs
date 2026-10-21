@@ -48,7 +48,8 @@ Options:
       --site-url <url>     The site's public URL with its base path, for github-pages
                            (default: from the site's config)
       --site-name <text>   The site's name, for the model's instructions (default: its title)
-      --out <dir>          A static site's build output folder (default: detected)
+      --build-dir <dir>    A static site's build output folder (default: detected)
+      --out <dir>          --build-dir's name before 0.14, which works until 1.0
       --no-mcp             Write the ask endpoint only
       --dry-run            Print what it would write, and write nothing
   -y, --yes                Overwrite files that differ without asking
@@ -229,7 +230,10 @@ const STATIC_GENERATORS: { label: string; files: string[]; out: string }[] = [
 ];
 
 /** Detects the site's framework, where its build writes the index, its name and its URL. */
-function detectSite(p: Project, flags: { out?: string; name?: string; siteUrl?: string }): Site {
+function detectSite(
+  p: Project,
+  flags: { buildDir?: string; name?: string; siteUrl?: string },
+): Site {
   const packageName = typeof p.pkg?.name === 'string' ? p.pkg.name : undefined;
   const homepage = typeof p.pkg?.homepage === 'string' ? p.pkg.homepage : undefined;
   const named = (title: string | undefined) => flags.name ?? title ?? packageName ?? 'the docs';
@@ -332,14 +336,14 @@ function detectSite(p: Project, flags: { out?: string; name?: string; siteUrl?: 
   }
 
   const generator = STATIC_GENERATORS.find(({ files }) => files.some((file) => p.has(file)));
-  const out = (flags.out ?? generator?.out)?.replace(/^\.\/|\/+$/g, '');
+  const out = (flags.buildDir ?? generator?.out)?.replace(/^\.\/|\/+$/g, '');
   if (!out) {
     const html = HTML_FOLDERS.find((dir) => hasHtml(p, dir));
     throw new InitError(
       'No Docusaurus, Astro, Next.js, VitePress, Hugo, MkDocs, Jekyll or Eleventy config here. ' +
         (html
-          ? `${html}/ has HTML files: if it is the folder the site deploys, run npx ondocs init --out ${html}.`
-          : 'Run init in the site’s folder. For plain HTML, pass the folder of its HTML files with --out <dir>, as in npx ondocs init --out public.'),
+          ? `${html}/ has HTML files: if it is the folder the site deploys, run npx ondocs init --build-dir ${html}.`
+          : 'Run init in the site’s folder. For plain HTML, pass the folder of its HTML files with --build-dir <dir>, as in npx ondocs init --build-dir public.'),
     );
   }
   const source =
@@ -874,6 +878,8 @@ function parseInitFlags(args: string[]) {
         'site-name': { type: 'string' },
         // --site-name's name before 0.9.
         name: { type: 'string' },
+        'build-dir': { type: 'string' },
+        // --build-dir's name before 0.14: `ondocs index -o` names the file it writes instead.
         out: { type: 'string' },
         mcp: { type: 'boolean' },
         'dry-run': { type: 'boolean' },
@@ -895,16 +901,21 @@ function parseInitFlags(args: string[]) {
       throw new InitError(`--site-url must be an absolute http(s) URL (got ${siteUrl}).`);
     }
     const name = values['site-name'] ?? values.name;
+    const buildDir = values['build-dir'] ?? values.out;
     return {
       ...(host ? { host: host as Host } : {}),
       ...(provider ? { provider: provider } : {}),
       ...(siteUrl ? { siteUrl: siteUrl.replace(/\/+$/, '') } : {}),
       ...(name ? { name } : {}),
-      deprecated:
-        values.name === undefined
+      deprecated: [
+        ...(values.name === undefined
           ? []
-          : [`--name is now --site-name. The old name still works until ${REMOVED_IN}.`],
-      ...(values.out ? { out: values.out } : {}),
+          : [`--name is now --site-name. The old name still works until ${REMOVED_IN}.`]),
+        ...(values.out === undefined
+          ? []
+          : [`--out is now --build-dir. The old name still works until ${REMOVED_IN}.`]),
+      ],
+      ...(buildDir ? { buildDir } : {}),
       mcp: values.mcp ?? true,
       dryRun: values['dry-run'] ?? false,
       yes: values.yes ?? false,

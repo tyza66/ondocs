@@ -1,0 +1,1313 @@
+# ondocs
+
+40 runtime exports, 29 types only
+
+class AskIndexError extends Error {
+  constructor(message?: string)
+  constructor(message?: string, options?: ErrorOptions)
+  name: string
+}
+interface AskIndexFile {
+  chunking: { maxChars: number; overlap: number; }
+  chunks: IndexChunk[]
+  contentHash: string
+  documents: IndexDocument[]
+  embedding: IndexEmbedding | null
+  format: typeof INDEX_FORMAT
+}
+experimental class Bm25Index {
+  constructor(documents: readonly (readonly string[])[], options?: Bm25Options)
+  idf(term: string): number
+  search(queryTerms: readonly string[]): Bm25Result
+  readonly size: number
+}
+experimental interface Bm25Options {
+  b?: number
+  k1?: number
+}
+experimental interface Bm25Result {
+  coverage: Float32Array
+  matchedTerms: Uint16Array
+  ranked: number[]
+  scores: Float32Array
+}
+interface BuildIndexOptions {
+  abortSignal?: AbortSignal
+  chunking?: ChunkingOptions
+  documents: readonly SourceDocument[]
+  embeddingModel?: EmbeddingModel | null
+  embeddingProviderOptions?: EmbeddingProviderOptions
+  maxParallelCalls?: number
+  onProgress?: (progress: { embedded: number; total: number; }) => void
+  previous?: AskIndexFile | null
+}
+interface BuildIndexResult {
+  index: AskIndexFile
+  stats: { documents: number; chunks: number; embedded: number; reused: number; }
+}
+experimental const CHUNKER_VERSION: 2
+interface CheckIndexOptions {
+  chunking?: ChunkingOptions
+  documents: readonly SourceDocument[]
+  embeddingDimensions?: number
+  embeddingModel?: EmbeddingModel | null
+  embeddingProviderOptions?: EmbeddingProviderOptions
+  index: AskIndexFile
+}
+interface CheckIndexResult {
+  added: string[]
+  changed: string[]
+  problems: string[]
+  removed: string[]
+  upToDate: boolean
+}
+interface Chunk {
+  anchor?: string
+  documentId: string
+  heading: string
+  id: string
+  text: string
+  title: string
+  url: string
+}
+interface ChunkingOptions {
+  maxChars?: number
+  overlap?: number
+}
+const DEFAULT_CHUNKING: { readonly maxChars: 1200; readonly overlap: 150; }
+const DEFAULT_RETRIEVAL: { readonly topK: 6; readonly candidates: 40; readonly rrfK: 60; readonly minSimilarity: 0.25; readonly minKeywordCoverage: 0.5; }
+type EmbeddingProviderOptions = {
+  [key: string]: JSONObject
+}
+interface Frontmatter {
+  body: string
+  data: Record<string, unknown>
+}
+experimental interface FusedResult {
+  item: number
+  score: number
+}
+interface HtmlMeta {
+  fallbackTitle?: string
+  id: string
+  ignore?: string
+  markdown?: boolean
+  root?: string
+  url: string
+}
+const INDEX_FORMAT: 'ask-my-site/index@1'
+interface IndexChunk {
+  anchor?: string
+  doc: number
+  hash: string
+  heading: string
+  id: string
+  text: string
+  vector?: string
+}
+interface IndexDocument {
+  id: string
+  title: string
+  url: string
+}
+interface IndexEmbedding {
+  dimensions: number
+  model: string
+  settings?: string
+}
+interface LlmsFile {
+  content: string
+  path: string
+}
+interface LlmsOutputs {
+  full?: boolean
+  index?: boolean
+  markdown?: boolean
+}
+interface LlmsPage {
+  content: string
+  description?: string
+  section?: string
+  title: string
+  url: string
+}
+interface LlmsSite {
+  base?: string
+  description?: string
+  mcp?: string
+  title: string
+  url?: string
+}
+interface LoadedIndex {
+  readonly bm25: Bm25Index
+  readonly chunking: AskIndexFile['chunking']
+  readonly chunks: readonly RetrievedChunk[]
+  readonly contentHash: string
+  readonly documents: readonly IndexDocument[]
+  readonly embedding: IndexEmbedding | null
+  readonly vectors: VectorIndex | null
+}
+interface MarkdownMeta {
+  fallbackTitle?: string
+  id: string
+  markdown?: boolean
+  mdx?: boolean
+  url: string
+}
+interface McpInstallLinks {
+  claude: string
+  claudeCode: string
+  codex: string
+  codexToml: string
+  cursor: string
+  gemini: string
+  json: string
+  name: string
+  url: string
+  vscode: string
+  vscodeInsiders: string
+  vscodeJson: string
+}
+interface McpInstallOptions {
+  name: string
+  url: string
+}
+interface RetrievalHit {
+  chunk: RetrievedChunk
+  keywordCoverage: number
+  keywordScore: number
+  score: number
+  similarity: number | null
+}
+interface RetrievalOptions {
+  candidates?: number
+  collapseCopies?: boolean
+  minKeywordCoverage?: number
+  minSimilarity?: number
+  rrfK?: number
+  similarityNeedsKeyword?: boolean | number
+  topK?: number
+}
+interface RetrievalResult {
+  answerable: boolean
+  best: { similarity: number | null; keywordCoverage: number; }
+  hits: RetrievalHit[]
+  mode: 'hybrid' | 'keyword'
+}
+interface RetrievedChunk {
+  documentId: string
+  heading: string
+  id: string
+  text: string
+  title: string
+  url: string
+}
+interface SourceDocument {
+  anchors?: 'slug' | 'explicit'
+  content: string
+  description?: string
+  id: string
+  title: string
+  url: string
+}
+experimental class VectorIndex {
+  constructor(matrix: Int8Array, dimensions: number)
+  readonly dimensions: number
+  similarities(query: ArrayLike<number>): Float32Array
+  readonly size: number
+}
+function buildIndex(options: BuildIndexOptions): Promise<BuildIndexResult>
+function buildLlmsFiles(pages: readonly LlmsPage[], site: LlmsSite, outputs?: LlmsOutputs): LlmsFile[]
+function checkIndex(options: CheckIndexOptions): Promise<CheckIndexResult>
+function chunkDocument(document: SourceDocument, options?: ChunkingOptions): Chunk[]
+experimental function chunkSearchText(chunk: Pick<Chunk, 'title' | 'heading' | 'text'>): string
+experimental function cosineSimilarity(a: ArrayLike<number>, b: ArrayLike<number>): number
+function createSlugger(): (text: string) => string
+experimental function decodeBase64(base64: string): Uint8Array
+function decodeEntities(text: string): string
+experimental function decodeVector(base64: string, dimensions: number): Int8Array
+function defaultMinSimilarity(model: string | undefined): number
+function embeddingModelId(model: EmbeddingModel): string
+experimental function embeddingSettingsKey(options: EmbeddingProviderOptions | undefined): Promise<string | undefined>
+experimental function encodeBase64(bytes: Uint8Array): string
+experimental function encodeVector(vector: ArrayLike<number>): string
+function fromDocuments(records: readonly unknown[]): SourceDocument[]
+function fromHtml(original: string, meta: HtmlMeta): SourceDocument | null
+function fromMarkdown(source: string, meta: MarkdownMeta): SourceDocument | null
+function gateHits(index: LoadedIndex, query: { text: string; vector?: ArrayLike<number> | null; }, hits: readonly RetrievalHit[], options?: RetrievalOptions): RetrievalResult
+function loadIndex(input: unknown): LoadedIndex
+function markdownPath(url: string, base?: string): string | null
+function mcpInstallLinks(options: McpInstallOptions): McpInstallLinks
+function mcpServerName(name: string): string
+function parseFrontmatter(source: string): Frontmatter
+function parseIndexFile(json: string): AskIndexFile
+experimental function quantizeInt8(vector: ArrayLike<number>): Int8Array
+experimental function reciprocalRankFusion(lists: readonly (readonly number[])[], k?: number): FusedResult[]
+function retrieve(index: LoadedIndex, query: { text: string; vector?: ArrayLike<number> | null; }, options?: RetrievalOptions): RetrievalResult
+function sameEmbeddingModel(a: string, b: string): boolean
+function serializeIndexFile(index: AskIndexFile): string
+function slugify(text: string): string
+experimental function tokenize(text: string): string[]
+function validateIndexFile(value: unknown): AskIndexFile
+
+# ondocs/node
+
+8 runtime exports, 5 types only
+
+interface AskConfig {
+  baseUrl?: string
+  chunking?: ChunkingOptions
+  cleanUrls?: boolean
+  dimensions?: number
+  documents?: SourceDocument[] | (() => SourceDocument[] | Promise<SourceDocument[]>)
+  embedding?: EmbeddingSpec
+  embeddingModel?: EmbeddingModel | null
+  embeddingProviderOptions?: EmbeddingProviderOptions
+  framework?: Framework | 'auto'
+  ignore?: string[]
+  llmsTxt?: { title?: string; description?: string; siteUrl?: string; mcp?: string; index?: boolean; full?: boolean; markdown?: boolean; }
+}
+const DEFAULT_EXTENSIONS: readonly ['.md', '.mdx', '.markdown', '.html', '.htm']
+type Framework = 'docusaurus' | 'starlight' | 'next' | 'none'
+interface FrameworkUrlOptions {
+  routing?: NextRouting
+}
+interface LoadDirectoryOptions {
+  baseUrl?: string
+  cleanUrls?: boolean
+  extensions?: readonly string[]
+  framework?: Framework | 'auto'
+  ignore?: readonly string[]
+  markdown?: boolean
+}
+type NextRouting = 'app' | 'fumadocs' | 'nextra' | 'content'
+function defineConfig(config: AskConfig): AskConfig
+function detectFramework(directory: string): Promise<Framework>
+function frameworkUrl(relativePath: string, frontmatter: Record<string, unknown>, framework: Framework, baseUrl?: string, {…}?: FrameworkUrlOptions): string
+function loadDirectory(directory: string, options?: LoadDirectoryOptions): Promise<SourceDocument[]>
+function pathToUrl(relativePath: string, baseUrl?: string, {…}?: { cleanUrls?: boolean; }): string
+function readIndexFile(path: string): Promise<AskIndexFile | null>
+function writeIndexFile(path: string, index: AskIndexFile): Promise<void>
+
+# ondocs/integration
+
+19 runtime exports, 25 types only
+
+interface BuiltPage {
+  document: SourceDocument
+  page?: LlmsPage
+}
+interface BuiltPageOptions {
+  contentSelector?: string
+  id?: string
+  ignore?: string  // deprecated
+  ignoreSelector?: string
+  markdown?: boolean
+  root?: string  // deprecated
+  titleSuffix?: string
+  url: string
+}
+interface ChunkingOptions {
+  maxChars?: number
+  overlap?: number
+}
+type EmbeddingProviderOptions = {
+  [key: string]: JSONObject
+}
+type EmbeddingSpec = 'none' | 'mock' | `mock:${number}` | `openai:${string}` | `workers-ai:@cf/${string}` | `${string}/${string}`
+type IndexOptions = {
+  chunking?: ChunkingOptions
+  dimensions?: number
+  embedding?: EmbeddingSpec
+  embeddingModel?: EmbeddingModel | null
+  embeddingProviderOptions?: EmbeddingProviderOptions
+}
+const LAUNCHER_STYLESHEETS: readonly string[]
+interface LauncherDialogOptions {
+  buttonLabel?: string | false  // deprecated
+  challenge?: { turnstile: string; }
+  labels?: Partial<AskDialogLabels>
+  launcher?: boolean | string
+  links?: 'all' | 'sources'
+  locales?: Record<string, LocaleDialogOptions>
+  navbar?: boolean | string
+  placeholder?: string
+  shortcut?: string | false
+  sourceUrls?: SourceUrls
+  suggestions?: string[]
+  theme?: OndocsTheme
+  title?: string
+}
+interface LauncherScriptOptions {
+  base?: string
+  dialog?: LauncherDialogOptions
+  endpoint: string
+  localeTitles?: Record<string, string>
+  locales?: readonly string[]
+  spa?: boolean
+  title?: string
+}
+type LlmsOutput = keyof Required<LlmsOutputs>
+interface LlmsOutputs {
+  full?: boolean
+  index?: boolean
+  markdown?: boolean
+}
+interface LlmsPage {
+  content: string
+  description?: string
+  section?: string
+  title: string
+  url: string
+}
+interface LlmsSite {
+  base?: string
+  description?: string
+  mcp?: string
+  title: string
+  url?: string
+}
+type LlmsTxtOption = boolean | { index?: boolean; full?: boolean; markdown?: boolean; title?: string; description?: string; }
+type LocaleDialogOptions = {
+  buttonLabel?: string | false  // deprecated
+  labels?: Partial<AskDialogLabels>
+  launcher?: boolean | string
+  placeholder?: string
+  suggestions?: string[]
+  title?: string
+}
+interface Logger {
+  info: (message: string) => void
+  warn: (message: string) => void
+}
+type McpOption = string | { url: string; name?: string; }
+interface OndocsDialogOptions {
+  buttonLabel?: string | false  // deprecated
+  challenge?: { turnstile: string; }
+  labels?: Partial<AskDialogLabels>
+  launcher?: boolean | string
+  links?: 'all' | 'sources'
+  placeholder?: string
+  shortcut?: string | false
+  sourceUrls?: SourceUrls
+  suggestions?: string[]
+  title?: string
+}
+type OndocsTheme = 'auto' | 'light' | 'dark'
+experimental interface OptionRule {
+  accepts(value: unknown): boolean
+  readonly advice?: string
+  check(value: unknown, path: string, issues: string[]): void
+  readonly expected: string
+}
+experimental interface OptionRuleSet {
+  anything: OptionRule
+  boolean: OptionRule
+  chunking: OptionRule
+  dialog: OptionRules<OndocsDialogOptions>
+  dialogRenamed: Record<string, string>
+  exclude: OptionRule
+  func: OptionRule
+  index: OptionRules<IndexOptions>
+  listOf: (rule: OptionRule, expected: string) => OptionRule
+  literal: (...values: readonly (string | number | boolean)[]) => OptionRule
+  llmsTxt: OptionRule
+  locales: OptionRule
+  mcp: OptionRule
+  number: OptionRule
+  object: OptionRule
+  oneOf: (...rules: readonly OptionRule[]) => OptionRule
+  recordOf: (rule: OptionRule, expected: string) => OptionRule
+  selector: (example: string) => OptionRule
+  shape: <Options>(rules: OptionRules<Options>, extras?: OptionShapeExtras) => OptionRule
+  string: OptionRule
+}
+experimental type OptionRules = {
+}
+experimental interface OptionShapeExtras {
+  deprecated?: Record<string, string>
+  hints?: Record<string, string>
+  notHere?: Record<string, string>
+  renamed?: Record<string, string>
+}
+interface SourceDocument {
+  anchors?: 'slug' | 'explicit'
+  content: string
+  description?: string
+  id: string
+  title: string
+  url: string
+}
+interface WriteLlmsFilesOptions {
+  dir: string
+  label: string
+  linkPages?: 'directory' | 'file'
+  log: Logger
+  outputs: Required<LlmsOutputs>
+  overwrite?: boolean
+  owners?: ReadonlyMap<LlmsOutput, string>
+  pages: readonly LlmsPage[]
+  site: LlmsSite
+}
+interface WriteSiteIndexOptions {
+  cache: { path: string; legacy?: string; }
+  documents: SourceDocument[]
+  embeddingModel: EmbeddingModel | null
+  embeddingProviderOptions?: EmbeddingProviderOptions | undefined
+  file: string
+  log: Logger
+  name: string
+  options: IndexOptions
+}
+function buildEmbedding(options: IndexOptions, log: Logger): Promise<{ model: EmbeddingModel | null; providerOptions?: EmbeddingProviderOptions; }>
+function checkIndexOptions(options: IndexOptions): void
+experimental function checkOptions(plugin: string, rules: OptionRule, options: unknown): void
+experimental function consoleLogger(): Logger
+function dialogEndpoint(endpoint: string | undefined): string
+experimental function excluder(exclude: readonly string[]): (path: string) => boolean
+experimental function hintDevEndpoint(endpoint: string, server: string, log: Logger): void
+function indexCache(root: string, file: string): { path: string; legacy: string; }
+function launcherScript({…}: LauncherScriptOptions): string
+function llmsOutputs(option: LlmsTxtOption | undefined): Required<LlmsOutputs>
+function loadBuiltPage(html: string, options: BuiltPageOptions): BuiltPage | null
+experimental const optionRules: OptionRuleSet
+experimental function quietUseClient(): { name: string; transform(code: string, id: string): { code: string; map: null; } | null; }
+function readBuiltHtml(outDir: string, path: string, layout?: 'directory' | 'file'): Promise<string | undefined>
+function resolveMcp(option: McpOption | undefined, siteUrl: string | undefined, siteTitle: string, where: string): { url: string; name: string; } | undefined
+experimental function warnMissingDialogPeers(log: Logger, from?: string | URL): void
+function writeLlmsFiles({…}: WriteLlmsFilesOptions): Promise<void>
+function writeSiteIndex({…}: WriteSiteIndexOptions): Promise<void>
+
+# ondocs/server
+
+18 runtime exports, 42 types only
+
+type AllowedOrigins = readonly string[] | '*'
+interface AnswerCacheOptions {
+  prefix?: string
+  store?: AnswerCacheStore
+  ttlSeconds?: number
+}
+interface AnswerCacheStore {
+  get(key: string): unknown
+  set(key: string, value: CachedAnswer, ttlSeconds: number): unknown
+}
+interface AskErrorBody {
+  error: { code: 'method_not_allowed' | 'payload_too_large' | 'unsupported_media_type' | 'invalid_json' | 'invalid_request' | 'rate_limited' | 'budget_exceeded' | 'challenge_required' | 'challenge_failed' | 'internal_error' | 'service_unavailable'; message: string; }
+}
+interface AskFeedbackBody {
+  feedback: { rating: 'up' | 'down'; comment?: string; id?: string; question: string; answer: string; sources?: string[]; }
+}
+interface AskFeedbackEvent {
+  answer: string
+  comment?: string
+  id?: string
+  question: string
+  rating: 'up' | 'down'
+  sources: string[]
+}
+interface AskFinishEvent {
+  answer: string
+  cached: boolean
+  followUp?: { question: string; usage?: LanguageModelUsage; }
+  id: string
+  lowConfidence: boolean
+  question: string
+  refused: boolean
+  retrieval: RetrievalResult
+  sources: AskSource[]
+  usage?: LanguageModelUsage
+}
+interface AskHandlerOptions {
+  allowedOrigins?: AllowedOrigins
+  answerCache?: boolean | AnswerCacheOptions
+  budget?: BudgetOptions
+  challenge?: ChallengeVerifier
+  embeddingModel?: EmbeddingModel
+  embeddingProviderOptions?: EmbeddingProviderOptions
+  failureMode?: 'closed' | 'open'
+  followUps?: false | FollowUpOptions
+  generation?: GenerationOptions
+  headers?: Record<string, string>
+  index: IndexSource | Promise<IndexSource> | (() => IndexSource | Promise<IndexSource>)
+  indexes?: Record<string, IndexSource | Promise<IndexSource> | (() => IndexSource | Promise<IndexSource>)>
+  instructions?: string | ((defaults: string) => string)
+  maxBodyBytes?: number
+  maxContextChars?: number  // deprecated
+  maxQuestionLength?: number
+  model: LanguageModel
+  noAnswerMessage?: string
+  onError?: (error: unknown) => void
+  onFeedback?: (event: AskFeedbackEvent) => void | Promise<void>
+  onFinish?: (event: AskFinishEvent) => void | Promise<void>
+  rateLimit?: RateLimiter | false
+  rateLimitFailure?: 'closed' | 'open'  // deprecated
+  retrieval?: AskRetrievalOptions
+  siteName?: string
+}
+interface AskMetadata {
+  feedback?: boolean
+  misconfigured?: boolean
+  refused: boolean
+  retrieval: 'hybrid' | 'keyword'
+}
+interface AskRequestBody {
+  challenge?: string
+  locale?: string
+  question: string
+}
+type AskRetrievalOptions = {
+  candidates?: number
+  collapseCopies?: boolean
+  maxContextChars?: number
+  minKeywordCoverage?: number
+  minSimilarity?: number
+  rerank?: (question: string, hits: RetrievalHit[], context: RetrievalHookContext) => RetrievalHit[] | Promise<RetrievalHit[]>
+  retrieve?: (query: RetrievalQuery, search: (options?: RetrievalOptions) => RetrievalHit[], context: RetrievalHookContext) => RetrievalHit[] | Promise<RetrievalHit[]>
+  rrfK?: number
+  similarityNeedsKeyword?: boolean | number
+  topK?: number
+}
+interface AskSource {
+  heading: string
+  id: number
+  title: string
+  url: string
+}
+interface BudgetOptions {
+  message?: string
+  now?: () => number
+  prefix?: string
+  requestsPerDay?: number
+  store?: BudgetStore
+  tokensPerDay?: number
+}
+interface BudgetStore {
+  increment(key: string, amount: number, ttlSeconds: number): number | Promise<number>
+}
+interface CachedAnswer {
+  answer: string
+  best: { similarity: number | null; keywordCoverage: number; }
+  refused: boolean
+  retrieval: 'hybrid' | 'keyword'
+  sources: AskSource[]
+}
+interface ChallengeResult {
+  errorCodes?: string[]
+  success: boolean
+}
+type ChallengeVerifier = (token: string, request: Request) => Promise<ChallengeResult>
+interface ClientKeyOptions {
+  trustedHeader?: string
+}
+interface FollowUpOptions {
+  always?: boolean
+  instructions?: string
+  maxTurns?: number
+  model?: LanguageModel
+}
+type GenerationOptions = {
+}
+type IndexSource = object | string
+const MCP_PROTOCOL_VERSIONS: readonly string[]
+interface McpHandlerOptions {
+  allowedOrigins?: AllowedOrigins
+  budget?: Omit<BudgetOptions, 'tokensPerDay'>
+  embeddingModel?: EmbeddingModel
+  embeddingProviderOptions?: EmbeddingProviderOptions
+  failureMode?: 'closed' | 'open'
+  headers?: Record<string, string>
+  index: IndexSource | Promise<IndexSource> | (() => IndexSource | Promise<IndexSource>)
+  indexes?: Record<string, IndexSource | Promise<IndexSource> | (() => IndexSource | Promise<IndexSource>)>
+  instructions?: string
+  maxBodyBytes?: number
+  maxQueryLength?: number
+  name?: string
+  onError?: (error: unknown) => void
+  onToolCall?: (event: McpToolCallEvent) => void | Promise<void>
+  rateLimit?: RateLimiter | false
+  rateLimitFailure?: 'closed' | 'open'  // deprecated
+  retrieval?: RetrievalOptions & RetrievalHooks
+  siteName?: string
+  siteUrl?: string | false
+  version?: string
+}
+interface McpSearchResult {
+  heading: string
+  id: string
+  text: string
+  title: string
+  url: string
+}
+interface McpToolCallEvent {
+  arguments: Record<string, unknown>
+  durationMs: number
+  isError: boolean
+  results?: string[]
+  retrieval?: 'hybrid' | 'keyword'
+  tool: string
+}
+interface MemoryAnswerCacheOptions {
+  maxEntries?: number
+  now?: () => number
+}
+interface MemoryBudgetStoreOptions {
+  now?: () => number
+}
+interface MemoryRateLimitOptions {
+  key?: (request: Request) => string
+  limit?: number
+  maxKeys?: number
+  now?: () => number
+  trustedHeader?: string
+  windowMs?: number
+}
+interface OndocsHandlers {
+  ask: (request: Request) => Promise<Response>
+  mcp: (request: Request) => Promise<Response>
+}
+interface OndocsOptions extends Pick< AskHandlerOptions, SharedOption | 'headers' | 'rateLimitFailure' | 'maxBodyBytes' | 'onError' > {
+  ask: Omit<AskHandlerOptions, SharedOption>
+  embeddingModel?: EmbeddingModel
+  embeddingProviderOptions?: EmbeddingProviderOptions
+  headers?: Record<string, string>
+  index: IndexSource | Promise<IndexSource> | (() => IndexSource | Promise<IndexSource>)
+  indexes?: Record<string, IndexSource | Promise<IndexSource> | (() => IndexSource | Promise<IndexSource>)>
+  maxBodyBytes?: number
+  mcp?: Omit<McpHandlerOptions, SharedOption> & { embeddingModel?: false; }
+  onError?: (error: unknown) => void
+  rateLimitFailure?: 'closed' | 'open'  // deprecated
+  retrieval?: RetrievalOptions & RetrievalHooks
+  siteName?: string
+}
+interface PromptSource {
+  heading: string
+  id: number
+  text: string
+  title: string
+  url: string
+}
+interface RateLimitResult {
+  limit?: number
+  remaining?: number
+  reset?: number
+  success: boolean
+}
+type RateLimiter = (request: Request) => RateLimitResult | Promise<RateLimitResult>
+interface RemoteIndex {
+  (): Promise<LoadedIndex>
+  readonly url: string
+}
+interface RemoteIndexOptions {
+  fetch?: (request: Request) => Promise<Response>
+  headers?: Record<string, string>
+  now?: () => number
+  onError?: (error: unknown) => void
+  revalidateSeconds?: number
+  timeoutSeconds?: number
+}
+interface RetrievalHookContext {
+  index: LoadedIndex
+  signal: AbortSignal
+}
+interface RetrievalHooks {
+  rerank?: (question: string, hits: RetrievalHit[], context: RetrievalHookContext) => RetrievalHit[] | Promise<RetrievalHit[]>
+  retrieve?: (query: RetrievalQuery, search: (options?: RetrievalOptions) => RetrievalHit[], context: RetrievalHookContext) => RetrievalHit[] | Promise<RetrievalHit[]>
+}
+interface RetrievalQuery {
+  text: string
+  vector: readonly number[] | null
+}
+const SOURCE_METADATA_KEY: 'askMySite'
+interface TurnstileOptions {
+  secretKey: string
+}
+interface UpstashRateLimitOptions {
+  key?: (request: Request) => string
+  trustedHeader?: string
+  waitUntil?: (promise: Promise<unknown>) => void
+}
+interface UpstashRatelimitLike {
+  limit(identifier: string): Promise<{ success: boolean; limit: number; remaining: number; reset: number; pending?: Promise<unknown>; }>
+}
+interface UpstashRedisCacheLike {
+  get(key: string): Promise<unknown>
+  set(key: string, value: string, options: { ex: number; }): Promise<unknown>
+}
+interface UpstashRedisCounterLike {
+  expire(key: string, seconds: number): Promise<unknown>
+  incrby(key: string, increment: number): Promise<number | string>
+}
+function buildSources(hits: readonly RetrievalHit[], maxContextChars: number): PromptSource[]
+function clientKey(request: Request, options?: ClientKeyOptions): string
+function createAskHandler(options: AskHandlerOptions): (request: Request) => Promise<Response>
+function createMcpHandler(options: McpHandlerOptions): (request: Request) => Promise<Response>
+function createOndocs(options: OndocsOptions): OndocsHandlers
+function defaultInstructions(siteName: string): string
+function formatPrompt(question: string, sources: readonly PromptSource[]): string
+function memoryAnswerCache(options?: MemoryAnswerCacheOptions): AnswerCacheStore
+function memoryBudgetStore(options?: MemoryBudgetStoreOptions): BudgetStore
+function memoryRateLimit(options?: MemoryRateLimitOptions): (request: Request) => Required<RateLimitResult>
+function normalizeQuestion(question: string): string
+function remoteIndex(url: string | URL, options?: RemoteIndexOptions): RemoteIndex
+function turnstile({…}: TurnstileOptions): ChallengeVerifier
+function upstashAnswerCache(redis: UpstashRedisCacheLike): AnswerCacheStore
+function upstashBudgetStore(redis: UpstashRedisCounterLike): BudgetStore
+function upstashRateLimit(ratelimit: UpstashRatelimitLike, options?: UpstashRateLimitOptions): RateLimiter
+
+# ondocs/react
+
+10 runtime exports, 17 types only
+
+type AnswerLinks = 'all' | 'sources'
+function AskAnswer({…}: AskAnswerProps): ReactNode
+interface AskAnswerProps {
+  citationLabel?: string
+  className?: string
+  links?: AnswerLinks
+  onNavigate?: (url: string, event: MouseEvent<HTMLAnchorElement>) => void
+  sourceUrls?: SourceUrls
+  sources: readonly AskSource[]
+  text: string
+}
+function AskButton({…}: AskButtonProps): ReactNode
+interface AskButtonProps extends Omit<AskDialogProps, 'trigger' | 'launcher'> {
+  challenge?: { turnstile: string; }
+  challengeToken?: () => Promise<string | undefined> | string | undefined
+  children?: ReactNode
+  className?: string
+  classNames?: Partial<Record<AskDialogSlot, string>>
+  defaultOpen?: boolean
+  endpoint?: string
+  fetch?: typeof fetch
+  followUps?: boolean
+  footer?: ReactNode
+  headers?: Record<string, string>
+  labels?: Partial<AskDialogLabels>
+  links?: AnswerLinks
+  locale?: string
+  onFinish?: (state: AskState) => void
+  onNavigate?: (url: string, event: MouseEvent<HTMLAnchorElement>) => void
+  onOpenChange?: (open: boolean) => void
+  open?: boolean
+  placeholder?: string
+  poweredBy?: boolean | string
+  question?: string
+  shortcut?: string | false
+  sourceUrls?: SourceUrls
+  suggestions?: readonly string[]
+  theme?: OndocsTheme | 'system'
+  title?: string
+}
+function AskDialog({…}: AskDialogProps): ReactNode
+interface AskDialogLabels {
+  addComment: string
+  answerFailed?: string
+  answerReadyMany: string
+  answerReadyOne: string
+  answerTruncated: string
+  ask: string
+  budgetExceeded?: string
+  challengeFailed: string
+  challengeRequired: string
+  citation: string
+  close: string
+  comment: string
+  commentPlaceholder: string
+  controlKey: string
+  description: string
+  errorCutOff: string
+  errorInterrupted: string
+  errorMisconfigured: string
+  errorNetwork: string
+  errorNoBody: string
+  errorUnavailable: string
+  errorUnknown: string
+  escapeKey: string
+  feedbackFailed: string
+  followUp: string
+  footer: string
+  footerAsk: string
+  footerClose: string
+  footerNoSources: string
+  helpful: string
+  helpfulQuestion: string
+  launcher: string
+  list: string
+  newQuestion: string
+  noAnswer?: string
+  noAnswerFound: string
+  notHelpful: string
+  placeholder: string
+  poweredBy: string
+  rateLimited?: string
+  retry: string
+  searching: string
+  send: string
+  serverError?: string
+  source: string
+  sourceCited: string
+  sourceNotCited: string
+  sources: string
+  stop: string
+  suggested: string
+  thanks: string
+  thanksComment: string
+  title: string
+  truncatedNotice: string
+  writing: string
+}
+interface AskDialogProps extends Omit<UseAskOptions, 'onFinish'> {
+  challenge?: { turnstile: string; }
+  challengeToken?: () => Promise<string | undefined> | string | undefined
+  classNames?: Partial<Record<AskDialogSlot, string>>
+  defaultOpen?: boolean
+  endpoint?: string
+  fetch?: typeof fetch
+  followUps?: boolean
+  footer?: ReactNode
+  headers?: Record<string, string>
+  labels?: Partial<AskDialogLabels>
+  launcher?: boolean | string
+  links?: AnswerLinks
+  locale?: string
+  onFinish?: (state: AskState) => void
+  onNavigate?: (url: string, event: MouseEvent<HTMLAnchorElement>) => void
+  onOpenChange?: (open: boolean) => void
+  open?: boolean
+  placeholder?: string
+  question?: string
+  shortcut?: string | false
+  sourceUrls?: SourceUrls
+  suggestions?: readonly string[]
+  theme?: OndocsTheme | 'system'
+  title?: string
+  trigger?: ReactNode
+}
+type AskDialogSlot = 'overlay' | 'content' | 'input' | 'list' | 'item' | 'answer' | 'sources' | 'footer'
+interface AskError {
+  code?: string
+  kind: 'rate-limited' | 'http' | 'network' | 'stream'
+  message: string
+  reason?: 'unavailable' | 'no-body' | 'interrupted' | 'cut-off' | 'server' | 'misconfigured'
+  retryAfter?: number
+  status?: number
+}
+interface AskMetadata {
+  feedback?: boolean
+  misconfigured?: boolean
+  refused: boolean
+  retrieval: 'hybrid' | 'keyword'
+}
+interface AskSource {
+  heading: string
+  id: number
+  title: string
+  url: string
+}
+interface AskState {
+  answer: string
+  error: AskError | null
+  feedbackEnabled: boolean
+  id: string | null
+  question: string | null
+  rating: 'up' | 'down' | null
+  refused: boolean
+  retrieval: 'hybrid' | 'keyword' | null
+  sources: AskSource[]
+  status: AskStatus
+  truncated: boolean
+  turns: AskTurn[]
+}
+type AskStatus = 'idle' | 'loading' | 'streaming' | 'done' | 'error'
+interface AskStreamHandlers {
+  delta?: (text: string) => void
+  error?: (message: string) => void
+  finish?: (finishReason?: string) => void
+  metadata?: (metadata: AskMetadata & { id?: string; }) => void
+  source?: (source: AskSource) => void
+}
+interface AskTurn {
+  answer: string
+  question: string
+  refused: boolean
+  sources: AskSource[]
+  truncated: boolean
+}
+const DEFAULT_LABELS: Readonly<DefaultLabels>
+function McpInstall({…}: McpInstallProps): ReactNode
+interface McpInstallProps {
+  buttonClassName?: string
+  name: string
+  url: string
+}
+interface SourceUrls {
+  base?: string
+  pages?: Record<string, string>
+}
+interface UseAsk {
+  answer: string
+  ask: (question: string) => Promise<void>
+  error: AskError | null
+  feedbackEnabled: boolean
+  id: string | null
+  question: string | null
+  rate: (rating: 'up' | 'down', comment?: string) => Promise<boolean>
+  rating: 'up' | 'down' | null
+  refused: boolean
+  reset: () => void
+  retrieval: 'hybrid' | 'keyword' | null
+  sources: AskSource[]
+  status: AskStatus
+  stop: () => void
+  truncated: boolean
+  turns: AskTurn[]
+}
+interface UseAskOptions {
+  challengeToken?: () => Promise<string | undefined> | string | undefined
+  endpoint?: string
+  fetch?: typeof fetch
+  followUps?: boolean
+  headers?: Record<string, string>
+  locale?: string
+  onFinish?: (state: AskState) => void
+}
+function citedSourceIds(text: string): Set<number>
+function loadAskDialog(): Promise<unknown>
+function readAskStream(body: ReadableStream<Uint8Array>, on: AskStreamHandlers): Promise<void>
+function safeHref(href: string): string | null
+function useAsk(options?: UseAskOptions): UseAsk
+
+# ondocs/mock
+
+6 runtime exports, 2 types only
+
+const MOCK_MIN_SIMILARITY: 0.2
+interface MockEmbeddingModelOptions {
+  dimensions?: number
+}
+interface MockLanguageModelOptions {
+  initialDelayMs?: number
+  wordDelayMs?: number
+}
+function extractiveAnswer(prompt: string): string
+function hashEmbedding(text: string, dimensions: number): number[]
+function mockEmbeddingModel(options?: MockEmbeddingModelOptions): MockEmbeddingModelV4
+function mockLanguageModel(options?: MockLanguageModelOptions): MockLanguageModelV4
+function mockStandaloneQuestion(prompt: string): string | null
+
+# ondocs/embed
+
+2 runtime exports, 8 types only
+
+interface AskDialogLabels {
+  addComment: string
+  answerFailed?: string
+  answerReadyMany: string
+  answerReadyOne: string
+  answerTruncated: string
+  ask: string
+  budgetExceeded?: string
+  challengeFailed: string
+  challengeRequired: string
+  citation: string
+  close: string
+  comment: string
+  commentPlaceholder: string
+  controlKey: string
+  description: string
+  errorCutOff: string
+  errorInterrupted: string
+  errorMisconfigured: string
+  errorNetwork: string
+  errorNoBody: string
+  errorUnavailable: string
+  errorUnknown: string
+  escapeKey: string
+  feedbackFailed: string
+  followUp: string
+  footer: string
+  footerAsk: string
+  footerClose: string
+  footerNoSources: string
+  helpful: string
+  helpfulQuestion: string
+  launcher: string
+  list: string
+  newQuestion: string
+  noAnswer?: string
+  noAnswerFound: string
+  notHelpful: string
+  placeholder: string
+  poweredBy: string
+  rateLimited?: string
+  retry: string
+  searching: string
+  send: string
+  serverError?: string
+  source: string
+  sourceCited: string
+  sourceNotCited: string
+  sources: string
+  stop: string
+  suggested: string
+  thanks: string
+  thanksComment: string
+  title: string
+  truncatedNotice: string
+  writing: string
+}
+type AskMySiteDialogOptions = OndocsDialogOptions  // deprecated
+type AskMySiteTheme = OndocsTheme  // deprecated
+interface MountAskDialogOptions {
+  buttonLabel?: string | false  // deprecated
+  challenge?: { turnstile: string; }
+  container?: Element
+  endpoint?: string
+  headers?: Record<string, string>
+  labels?: Partial<AskDialogLabels>
+  launcher?: boolean | string
+  links?: 'all' | 'sources'
+  locale?: string
+  onNavigate?: (url: string, event: MouseEvent) => void
+  placeholder?: string
+  shortcut?: string | false
+  sourceUrls?: SourceUrls
+  suggestions?: string[]
+  theme?: OndocsTheme
+  title?: string
+}
+interface MountedAskDialog {
+  close: () => void
+  open: (question?: string) => void
+  unmount: () => void
+}
+interface OndocsDialogOptions {
+  buttonLabel?: string | false  // deprecated
+  challenge?: { turnstile: string; }
+  labels?: Partial<AskDialogLabels>
+  launcher?: boolean | string
+  links?: 'all' | 'sources'
+  placeholder?: string
+  shortcut?: string | false
+  sourceUrls?: SourceUrls
+  suggestions?: string[]
+  title?: string
+}
+type OndocsTheme = 'auto' | 'light' | 'dark'
+interface SourceUrls {
+  base?: string
+  pages?: Record<string, string>
+}
+function mountAskDialog(options?: MountAskDialogOptions): MountedAskDialog
+function openAskDialog(question?: string): void
+
+# ondocs/docusaurus
+
+4 runtime exports, 7 types only
+
+type AskMySiteDialogOptions = OndocsDialogOptions  // deprecated
+type AskMySiteGlobalData = OndocsGlobalData  // deprecated
+type AskMySiteOptions = OndocsOptions  // deprecated
+interface OndocsDialogOptions {
+  buttonLabel?: string | false  // deprecated
+  challenge?: { turnstile: string; }
+  labels?: Partial<AskDialogLabels>
+  launcher?: boolean | string
+  links?: 'all' | 'sources'
+  locales?: Record<string, OndocsLocaleDialogOptions>
+  navbar?: boolean | string
+  placeholder?: string
+  shortcut?: string | false
+  sourceUrls?: SourceUrls
+  suggestions?: string[]
+  title?: string
+}
+interface OndocsGlobalData {
+  dialog: Omit<OndocsDialogOptions, 'locales' | 'navbar'> & { title: string; }
+  endpoint: string
+  locale?: string
+  mcp?: { url: string; name: string; }
+  navbar?: string
+}
+type OndocsLocaleDialogOptions = LocaleDialogOptions
+type OndocsOptions = {
+  chunking?: ChunkingOptions
+  dialog?: OndocsDialogOptions
+  dimensions?: number
+  embedding?: EmbeddingSpec
+  embeddingModel?: EmbeddingModel | null
+  embeddingProviderOptions?: EmbeddingProviderOptions
+  endpoint?: string
+  exclude?: string[]
+  id?: string
+  indexFile?: string
+  llmsTxt?: LlmsTxtOption
+  mcp?: McpOption
+  versions?: 'last' | 'all'
+}
+function default(context: LoadContext, options?: OndocsOptions): { name: string; getThemePath(): string; getClientModules(): Array<string>; injectHtmlTags(): { headTags?: undefined; } | { headTags: Array<{ tagName: string; innerHTML: string; }>; }; contentLoaded({ actions }: { actions: { setGlobalData: (data: unknown) => void; }; }): void; postBuild({ outDir, routesPaths, plugins }: PostBuildProps): Promise<void>; }
+function llmsOwners(plugins: readonly { name: string; options?: unknown; }[]): Map<LlmsOutput, string>
+function validateOptions({…}: { options: OndocsOptions; }): OndocsOptions
+function warnOldSwizzle(siteDir: string, log: Logger): void
+
+# ondocs/astro
+
+1 runtime exports, 4 types only
+
+type AskMySiteDialogOptions = OndocsDialogOptions  // deprecated
+type AskMySiteOptions = OndocsOptions  // deprecated
+interface OndocsDialogOptions {
+  buttonLabel?: string | false  // deprecated
+  challenge?: { turnstile: string; }
+  labels?: Partial<AskDialogLabels>
+  launcher?: boolean | string
+  links?: 'all' | 'sources'
+  locales?: Record<string, OndocsLocaleDialogOptions>
+  placeholder?: string
+  shortcut?: string | false
+  sourceUrls?: SourceUrls
+  suggestions?: string[]
+  theme?: OndocsTheme
+  title?: string
+}
+interface OndocsOptions {
+  chunking?: ChunkingOptions
+  content?: string  // deprecated
+  contentSelector?: string
+  dialog?: OndocsDialogOptions
+  dimensions?: number
+  embedding?: EmbeddingSpec
+  embeddingModel?: EmbeddingModel | null
+  embeddingProviderOptions?: EmbeddingProviderOptions
+  endpoint?: string
+  exclude?: string[]
+  ignore?: string  // deprecated
+  ignoreSelector?: string
+  indexFile?: string
+  llmsTxt?: LlmsTxtOption
+  mcp?: McpOption
+  route?: OndocsRouteOptions | false
+}
+function default(options?: OndocsOptions): AstroIntegration
+
+# ondocs/astro/ask-route
+
+2 runtime exports, 0 types only
+
+function ALL(context: RouteContext): Promise<Response>
+const prerender: false
+
+# ondocs/astro/mcp-route
+
+2 runtime exports, 0 types only
+
+function ALL(context: RouteContext): Promise<Response>
+const prerender: false
+
+# ondocs/starlight
+
+2 runtime exports, 4 types only
+
+type AskMySiteDialogOptions = OndocsDialogOptions  // deprecated
+type AskMySiteStarlightOptions = OndocsStarlightOptions  // deprecated
+interface OndocsDialogOptions {
+  buttonLabel?: string | false  // deprecated
+  challenge?: { turnstile: string; }
+  labels?: Partial<AskDialogLabels>
+  launcher?: boolean | string
+  links?: 'all' | 'sources'
+  locales?: Record<string, OndocsLocaleDialogOptions>
+  navbar?: boolean | string
+  placeholder?: string
+  shortcut?: string | false
+  sourceUrls?: SourceUrls
+  suggestions?: string[]
+  theme?: OndocsTheme
+  title?: string
+}
+type OndocsStarlightOptions = {
+  chunking?: ChunkingOptions
+  contentSelector?: string
+  dialog?: OndocsDialogOptions
+  dimensions?: number
+  embedding?: EmbeddingSpec
+  embeddingModel?: EmbeddingModel | null
+  embeddingProviderOptions?: EmbeddingProviderOptions
+  endpoint?: string
+  exclude?: string[]
+  ignoreSelector?: string
+  indexFile?: string
+  llmsTxt?: LlmsTxtOption
+  mcp?: McpOption
+  route?: OndocsRouteOptions | false
+}
+function default(options?: OndocsStarlightOptions): StarlightPlugin
+function navbarButtons(config: Pick<StarlightUserConfig, 'components' | 'locales' | 'pagefind'>, dialog: OndocsDialogOptions | undefined, root: string): NavbarButtons | undefined
+
+# ondocs/vitepress
+
+7 runtime exports, 5 types only
+
+interface OndocsDialogOptions {
+  buttonLabel?: string | false  // deprecated
+  challenge?: { turnstile: string; }
+  labels?: Partial<AskDialogLabels>
+  launcher?: boolean | string
+  links?: 'all' | 'sources'
+  locales?: Record<string, OndocsLocaleDialogOptions>
+  navbar?: boolean | string
+  placeholder?: string
+  shortcut?: string | false
+  sourceUrls?: SourceUrls
+  suggestions?: string[]
+  theme?: OndocsTheme
+  title?: string
+}
+type OndocsLocaleDialogOptions = LocaleDialogOptions
+interface OndocsOptions {
+  chunking?: ChunkingOptions
+  content?: string  // deprecated
+  contentSelector?: string
+  dialog?: OndocsDialogOptions
+  dimensions?: number
+  embedding?: EmbeddingSpec
+  embeddingModel?: EmbeddingModel | null
+  embeddingProviderOptions?: EmbeddingProviderOptions
+  endpoint?: string
+  exclude?: string[]
+  ignore?: string  // deprecated
+  ignoreSelector?: string
+  indexFile?: string
+  llmsTxt?: LlmsTxtOption
+  mcp?: McpOption
+  siteUrl?: string
+}
+interface VitePressConfig {
+  buildEnd?: Hook
+  sitemap?: { hostname?: string; }
+  title?: string
+  transformHtml?: Hook
+  vite?: { plugins?: unknown[]; }
+}
+interface VitePressSiteConfig {
+  cleanUrls?: boolean
+  mpa?: boolean
+  outDir: string
+  pages: string[]
+  rewrites: { map: Record<string, string | undefined>; }
+  root: string
+  site: { base: string; title: string; description: string; locales: Record<string, LocaleData | undefined>; }
+  sitemap?: { hostname?: string; }
+}
+function default<Config extends VitePressConfig>(config: Config, options?: OndocsOptions): Config
+function default<Config extends VitePressConfig>(config: Promise<Config>, options?: OndocsOptions): Promise<Config>
+function default<Config extends VitePressConfig, Env>(config: (env: Env) => Config | Promise<Config>, options?: OndocsOptions): (env: Env) => Config | Promise<Config>
+function launcherModule(endpoint: string, options: OndocsOptions, site: VitePressSiteConfig | undefined): string
+function llmsOwners(plugins: readonly unknown[]): Map<LlmsOutput, string>
+function navbarButtonModule(dialog: OndocsDialogOptions, locales: readonly string[]): string
+function pageLocation(file: string, {…}: { base: string; cleanUrls?: boolean; }): { url: string; path: string; html: string; }
+function withNavbarButton(sfc: string): string | null
+function withOndocs<Config extends VitePressConfig>(config: Config, options?: OndocsOptions): Config
+function withOndocs<Config extends VitePressConfig>(config: Promise<Config>, options?: OndocsOptions): Promise<Config>
+function withOndocs<Config extends VitePressConfig, Env>(config: (env: Env) => Config | Promise<Config>, options?: OndocsOptions): (env: Env) => Config | Promise<Config>

@@ -15,6 +15,7 @@ import { fileURLToPath } from 'node:url';
 import {
   buildEmbedding,
   checkIndexOptions,
+  checkOptions,
   consoleLogger,
   dialogEndpoint,
   excluder,
@@ -22,6 +23,7 @@ import {
   indexCache,
   llmsOutputs,
   loadBuiltPage,
+  optionRules,
   readBuiltHtml,
   resolveMcp,
   warnMissingDialogPeers,
@@ -143,7 +145,43 @@ interface PostBuildProps {
 
 const here = dirname(fileURLToPath(import.meta.url));
 
+const { anything, boolean, oneOf, shape, string } = optionRules;
+
+/** The options, checked as the config gives them: a plugin tuple's are not type-checked. */
+const OPTION_RULES = shape<OndocsOptions>({
+  ...optionRules.index,
+  id: string,
+  endpoint: string,
+  indexFile: string,
+  exclude: optionRules.exclude,
+  // Checked in the plugin, with its own message.
+  versions: anything,
+  dialog: shape<OndocsDialogOptions>(
+    {
+      ...optionRules.dialog,
+      title: string,
+      navbar: oneOf(boolean, string),
+      locales: optionRules.locales,
+    },
+    { renamed: optionRules.dialogRenamed },
+  ),
+  mcp: optionRules.mcp,
+  llmsTxt: optionRules.llmsTxt,
+});
+
+/**
+ * Checks the plugin's options before Docusaurus loads the plugin, as Docusaurus runs a plugin's
+ * `validateOptions`: an option that is misspelled, or not one in this version of ondocs, fails
+ * the build with what to change. Returns the options as they are.
+ */
+export function validateOptions({ options }: { options: OndocsOptions }): OndocsOptions {
+  checkOptions('ondocs/docusaurus', OPTION_RULES, options);
+  return options;
+}
+
 export default function ondocs(context: LoadContext, options: OndocsOptions = {}) {
+  // Also here, for a plugin loaded as a function, which Docusaurus does not validate.
+  checkOptions('ondocs/docusaurus', OPTION_RULES, options);
   checkIndexOptions(options);
   // Checked as the config gives it, which TypeScript may not have seen.
   const versions: unknown = options.versions;
@@ -482,7 +520,12 @@ async function loadBuiltPages(
     if (route.endsWith('404.html') || excluded(path) || leftOut(route)) continue;
     const html = await readBuiltHtml(outDir, path);
     if (html === undefined || !isContentPage(html)) continue;
-    const built = loadBuiltPage(html, { url: route, root: 'article', titleSuffix, markdown });
+    const built = loadBuiltPage(html, {
+      url: route,
+      contentSelector: 'article',
+      titleSuffix,
+      markdown,
+    });
     if (!built) continue;
     documents.push(built.document);
     if (built.page) pages.push(built.page);

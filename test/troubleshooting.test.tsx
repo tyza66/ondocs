@@ -155,8 +155,9 @@ describe('the Troubleshooting page', () => {
           index: () => readFile(join(dir, 'build/ask-index.json'), 'utf8'),
           quoted: () => 'ENOENT: no such file or directory',
         },
-        // A path where the index goes.
-        { index: './ask-index.json', quoted: () => 'Index is not valid JSON' },
+        // A path where the index goes, from a function: given as it is, it fails as the handler
+        // is made.
+        { index: () => './ask-index.json', quoted: () => 'Index is not valid JSON' },
       ];
       for (const { index, quoted } of cases) {
         const { ask, logged } = initEndpoint(index);

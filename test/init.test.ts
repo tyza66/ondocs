@@ -347,19 +347,19 @@ describe('ondocs init', () => {
     );
   });
 
-  it('tells a plain HTML site to name its folder with --out', async () => {
+  it('tells a plain HTML site to name its folder with --build-dir', async () => {
     await site({ 'package.json': JSON.stringify({ name: 'acme' }) });
     const nothing = await run([]);
     expect(nothing.code).toBe(2);
     expect(nothing.stderr).toContain(
-      'For plain HTML, pass the folder of its HTML files with --out <dir>, as in npx ondocs init --out public.',
+      'For plain HTML, pass the folder of its HTML files with --build-dir <dir>, as in npx ondocs init --build-dir public.',
     );
 
     await site({ '_site/index.html': '<!doctype html><title>Acme</title><main>Hi</main>' });
     const found = await run([]);
     expect(found.code).toBe(2);
     expect(found.stderr).toContain(
-      '_site/ has HTML files: if it is the folder the site deploys, run npx ondocs init --out _site.',
+      '_site/ has HTML files: if it is the folder the site deploys, run npx ondocs init --build-dir _site.',
     );
     const named = await run(['--out', '_site', '--host', 'vercel', '--dry-run']);
     expect(named.code).toBe(0);

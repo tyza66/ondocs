@@ -5,9 +5,11 @@ import type { EmbeddingModel } from 'ai';
 
 import { version } from '../../package.json' with { type: 'json' };
 import type { EmbeddingProviderOptions } from '../build';
+import { warnDeprecated } from '../deprecation';
 import { findPage } from '../search/pages';
 import type { LoadedIndex, RetrievalOptions } from '../search/retrieve';
 import { BUDGET_EXCEEDED_MESSAGE, createBudget, type BudgetOptions } from './budget';
+import { indexSource } from './handler';
 import {
   fetchPage,
   listPages,
@@ -20,6 +22,7 @@ import {
   type McpToolResult,
 } from './mcp-tools';
 import type { RateLimiter } from './rate-limit';
+import { reportRemoteIndexErrors } from './remote-index';
 import { retrieveWithHooks, type RetrievalHooks } from './retrieval';
 import {
   CLIENT_CLOSED,
@@ -64,16 +67,21 @@ const LIST_TTL_MS = 3_600_000;
 export interface McpHandlerOptions {
   /**
    * The index: `import index from './ask-index.json'`, its JSON text, the result of `loadIndex`,
-   * or a (possibly async) function returning any of those, called once on the first request. The
-   * same imported object given to `createAskHandler` too is loaded once and shared.
+   * a Promise of any of those (`import('./ask-index.json')`), or a (possibly async) function
+   * returning any of those, called once on the first request. The same imported object given to
+   * `createAskHandler` too is loaded once and shared. As for `createAskHandler`, an index given as
+   * it is, not as a function, is checked as the handler is made.
    */
-  index: IndexSource | (() => IndexSource | Promise<IndexSource>);
+  index: IndexSource | Promise<IndexSource> | (() => IndexSource | Promise<IndexSource>);
   /**
    * The index of each other locale, by its name (`fr`, `pt-br`), as for `createAskHandler`. With
    * them, `search` and `list_pages` take a `locale`, one of these, and read `index` without one
    * or for one with no index here; `fetch` reads a page from whichever index has it.
    */
-  indexes?: Record<string, IndexSource | (() => IndexSource | Promise<IndexSource>)>;
+  indexes?: Record<
+    string,
+    IndexSource | Promise<IndexSource> | (() => IndexSource | Promise<IndexSource>)
+  >;
   /**
    * The model the index was embedded with, to embed each search query (one embedding call per
    * search, at the provider's embedding price). Without it, search is keyword-only and the
@@ -116,7 +124,15 @@ export interface McpHandlerOptions {
    * Hosted clients (ChatGPT, claude.ai) call from their own servers, so their users share IPs.
    */
   rateLimit?: RateLimiter | false;
-  /** As `createAskHandler`'s: `"closed"` (default) answers 503 when the limiter or budget store fails. */
+  /**
+   * As `createAskHandler`'s: `"closed"` (the default) answers 503 when the limiter or the budget
+   * store fails, and `"open"` answers as if the call were allowed.
+   */
+  failureMode?: 'closed' | 'open';
+  /**
+   * @deprecated Use `failureMode`, which takes the same values. `rateLimitFailure` still works,
+   * with a warning, until 1.0.
+   */
   rateLimitFailure?: 'closed' | 'open';
   /**
    * A daily cap on tool calls for the whole endpoint, counted in `store` (memory, per instance,
@@ -219,6 +235,12 @@ const REFUSALS: Record<RefusalReason, { code: number; message: string }> = {
 export function createMcpHandler(
   options: McpHandlerOptions,
 ): (request: Request) => Promise<Response> {
+  // Checked as the handler is made, so the build or the deploy fails, not every call.
+  const source = indexSource(options.index, 'createMcpHandler: index');
+  const localeSources = Object.entries(options.indexes ?? {}).map(
+    ([locale, given]) =>
+      [locale, indexSource(given, `createMcpHandler: indexes.${locale}`)] as const,
+  );
   const siteName = options.siteName ?? 'this site';
   const maxQueryLength = options.maxQueryLength ?? 500;
   const maxBodyBytes = options.maxBodyBytes ?? 64 * 1024;
@@ -227,6 +249,15 @@ export function createMcpHandler(
     ((error: unknown) => {
       console.error('[ondocs]', error);
     });
+  // A remote index's failed checks go to `onError`, when there is one; else it logs them itself.
+  if (options.onError) {
+    for (const given of [options.index, ...Object.values(options.indexes ?? {})]) {
+      reportRemoteIndexErrors(given, options.onError);
+    }
+  }
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- its name before 0.14, still read
+  const oldFailureMode = options.rateLimitFailure;
+  if (oldFailureMode !== undefined) warnDeprecated('rateLimitFailure', 'failureMode');
   const rateLimit =
     options.rateLimit === undefined
       ? defaultRateLimit(DEFAULT_RATE_LIMIT, 'tool calls', reportError)
@@ -239,12 +270,9 @@ export function createMcpHandler(
       `siteUrl must be an absolute URL (got ${JSON.stringify(options.siteUrl)}).`,
     );
   }
-  const getIndex = indexLoader(options.index, options.embeddingModel);
+  const getIndex = indexLoader(source, options.embeddingModel);
   const localeIndexes = new Map(
-    Object.entries(options.indexes ?? {}).map(([locale, source]) => [
-      locale,
-      indexLoader(source, options.embeddingModel),
-    ]),
+    localeSources.map(([locale, given]) => [locale, indexLoader(given, options.embeddingModel)]),
   );
   /** The index a tool reads: its `locale`'s, when there is one for it, and `index` otherwise. */
   const indexFor = (locale: unknown): (() => Promise<LoadedIndex>) =>
@@ -264,7 +292,7 @@ export function createMcpHandler(
 
   const guard = requestGuard({
     rateLimit,
-    failure: options.rateLimitFailure,
+    failure: options.failureMode ?? oldFailureMode,
     maxBodyBytes,
     report: reportError,
     now: options.budget?.now,

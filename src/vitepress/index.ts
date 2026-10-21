@@ -15,6 +15,7 @@ import { dirname, join, relative } from 'node:path';
 import {
   buildEmbedding,
   checkIndexOptions,
+  checkOptions,
   consoleLogger,
   dialogEndpoint,
   excluder,
@@ -24,6 +25,7 @@ import {
   launcherScript,
   llmsOutputs,
   loadBuiltPage,
+  optionRules,
   quietUseClient,
   readBuiltHtml,
   resolveMcp,
@@ -79,10 +81,21 @@ export interface OndocsOptions extends IndexOptions {
    * theme's container of the page's Markdown, without the navigation, sidebar, outline or doc
    * footer. A page where it matches nothing is not indexed.
    */
+  contentSelector?: string;
+  /**
+   * Elements to leave out of `contentSelector`, as a selector like it, e.g. `.toc, .comments`,
+   * besides the heading anchors and code blocks' language labels, which are always left out. To
+   * leave out whole pages, use `exclude`.
+   */
+  ignoreSelector?: string;
+  /**
+   * @deprecated Use `contentSelector`, which takes the same selector. `content` still works, with a
+   * warning, until 1.0.
+   */
   content?: string;
   /**
-   * Elements to leave out of `content`, as a selector like it, e.g. `.toc, .comments`, besides
-   * the heading anchors and code blocks' language labels, which are always left out.
+   * @deprecated Use `ignoreSelector`, which takes the same selector. `ignore` still works, with a
+   * warning, until 1.0.
    */
   ignore?: string;
   /** Where the index is written in the build output, and served from. Default `ask-index.json`. */
@@ -118,6 +131,36 @@ export interface OndocsOptions extends IndexOptions {
    */
   llmsTxt?: LlmsTxtOption;
 }
+
+const { boolean, literal, oneOf, selector, shape, string } = optionRules;
+
+/** The options, checked as the config gives them. */
+const OPTION_RULES = shape<OndocsOptions>(
+  {
+    ...optionRules.index,
+    endpoint: string,
+    contentSelector: selector('.vp-doc'),
+    ignoreSelector: selector('.toc, .comments'),
+    content: selector('.vp-doc'),
+    ignore: selector('.toc, .comments'),
+    indexFile: string,
+    exclude: optionRules.exclude,
+    dialog: shape<OndocsDialogOptions>(
+      {
+        ...optionRules.dialog,
+        title: string,
+        theme: literal('auto', 'light', 'dark'),
+        navbar: oneOf(boolean, string),
+        locales: optionRules.locales,
+      },
+      { renamed: optionRules.dialogRenamed },
+    ),
+    siteUrl: string,
+    mcp: optionRules.mcp,
+    llmsTxt: optionRules.llmsTxt,
+  },
+  { deprecated: { content: 'contentSelector', ignore: 'ignoreSelector' } },
+);
 
 /** A hook of VitePress's config, typed loosely so that any config's hooks fit. */
 type Hook = (...args: never[]) => unknown;
@@ -224,6 +267,8 @@ export function withOndocs<Config extends VitePressConfig>(
   config: Config | Promise<Config> | ((env: unknown) => Config | Promise<Config>),
   options: OndocsOptions = {},
 ): Config | Promise<Config> | ((env: unknown) => Config | Promise<Config>) {
+  // Says once what `content` and `ignore` are called now.
+  checkOptions('ondocs/vitepress', OPTION_RULES, options);
   checkIndexOptions(options);
   // A Promise or a function spread into an object would lose the whole config: wrap the object
   // it gives, in the same shape.
@@ -573,8 +618,12 @@ async function indexSite(
   const indexFile = (options.indexFile ?? 'ask-index.json').replace(/^\/+/, '');
   const outputs = llmsOutputs(options.llmsTxt);
   const markdown = outputs.index || outputs.full || outputs.markdown;
-  const content = options.content ?? '.vp-doc';
-  const ignore = [ALWAYS_IGNORED, options.ignore].filter(Boolean).join(', ');
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- their names before 0.14, still read
+  const { content: oldContent, ignore: oldIgnore } = options;
+  const contentSelector = options.contentSelector ?? oldContent ?? '.vp-doc';
+  const ignoreSelector = [ALWAYS_IGNORED, options.ignoreSelector ?? oldIgnore]
+    .filter(Boolean)
+    .join(', ');
   const excluded = excluder(options.exclude ?? []);
   const locales = localeKeys(site);
   const groups = new Map<string, { documents: SourceDocument[]; copies: LlmsPage[] }>(
@@ -606,8 +655,8 @@ async function indexSite(
     const titleSuffix = info ? info.titleSuffix : ` | ${localeTitle(site, locale || 'root') ?? ''}`;
     const built = loadBuiltPage(html, {
       url: location.url,
-      root: content,
-      ignore,
+      contentSelector,
+      ignoreSelector,
       markdown,
       ...(titleSuffix ? { titleSuffix } : {}),
     });
@@ -626,7 +675,7 @@ async function indexSite(
   const total = [...groups.values()].reduce((sum, group) => sum + group.documents.length, 0);
   if (total === 0) {
     log.warn(
-      `None of the ${String(files.length)} pages VitePress built has content in ${content}, so there is no ${indexFile}. With a custom theme, set \`content\` to the selector of the page's content.`,
+      `None of the ${String(files.length)} pages VitePress built has content in ${contentSelector}, so there is no ${indexFile}. With a custom theme, set \`contentSelector\` to the selector of the page's content.`,
     );
     return;
   }

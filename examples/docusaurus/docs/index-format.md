@@ -10,6 +10,16 @@ The index is one JSON file, `ask-index.json`, with your documents, their chunks 
 
 The file records its format (`ask-my-site/index@1`, under the package's name before it became ondocs, so indexes from either name are read by both), the embedding model and vector size it was built with, the chunking options, a content hash, the documents (`id`, `url`, `title`) and the chunks. Each chunk has its heading path, its anchor, its text, a hash of the text it was embedded from, and its vector.
 
+## Compatibility
+
+The site that builds the index and the endpoint that reads it are often built apart: the Worker that `ondocs init --host github-pages` writes fetches the live site's `ask-index.json` and is upgraded on its own. So the format changes by these rules:
+
+- **A field a later version adds is not a new format.** It stays `ask-my-site/index@1`, and readers ignore the fields they do not know, so an older endpoint reads a newer site's index.
+- **A change an older reader could not follow gets a new id**, ending in `@2` rather than `@1`. Readers accept the new id for at least one minor version before any version writes it, so an endpoint kept within a minor of the site reads its index whichever version built it. The release notes and [Upgrading](./upgrading.md) say which version to upgrade the endpoint to first.
+- **An index the endpoint cannot read fails where it shows.** `createAskHandler` and `createMcpHandler`, given an index of another format as it is rather than through a function, fail as they are made, and say both ways out: upgrade the endpoint, or rebuild the index. A [`remoteIndex`](./deployment.md#github-pages-and-other-static-hosts) that finds one on a later check keeps answering from the index it has, and reports the failed check to its `onError`, or the handlers'.
+
+Every test run reads two indexes that ondocs 0.10.0 wrote, one keyword-only and one with 512-dimension vectors, from `test/fixtures/index-0.10` in the repository, so a reader change that would break an index already deployed fails the build.
+
 ## Index size
 
 A site of 1,000 chunks of about 800 characters at 512 dimensions makes an index of 1.6 MB, or 0.9 MB gzipped. The size grows linearly: 15.7 MB at 10,000 chunks and 78.7 MB at 50,000. The same index with vectors written as plain JSON numbers would be 7.5 MB at 1,000 chunks. A keyword-only index has no vectors and is smaller still.

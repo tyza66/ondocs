@@ -14,6 +14,7 @@ import { fromHtml } from '../loaders/html';
 import { fromMarkdown, parseFrontmatter } from '../loaders/markdown';
 import { dropHeadingFootnotes } from '../text/markdown';
 import type { ChunkingOptions, SourceDocument } from '../types';
+import type { EmbeddingSpec } from './embedding';
 import { matchesGlob } from './glob';
 import {
   NEXT_CONFIG,
@@ -360,7 +361,19 @@ export async function writeIndexFile(path: string, index: AskIndexFile): Promise
 
 /** The default export of a `--config` module for the CLI. Every field is optional. */
 export interface AskConfig {
-  /** Embedding model for builds. `null` builds a keyword-only index. */
+  /**
+   * The embedding model for builds, as `--embedding` names it and the plugins' `embedding` takes
+   * it, so the config needs no provider import: `openai:<model>`, `workers-ai:@cf/<model>`,
+   * `<provider>/<model>` through AI Gateway, `mock[:<dims>]`, or `none` for a keyword-only index.
+   * Instead of `embeddingModel`. `--embedding` wins over it.
+   */
+  embedding?: EmbeddingSpec;
+  /**
+   * The vector size for `embedding` or the default model, as `--dimensions`, which wins over it.
+   * With `embeddingModel`, set `embeddingProviderOptions` instead.
+   */
+  dimensions?: number;
+  /** Embedding model for builds, as an AI SDK model. `null` builds a keyword-only index. */
   embeddingModel?: EmbeddingModel | null;
   embeddingProviderOptions?: EmbeddingProviderOptions;
   chunking?: ChunkingOptions;

@@ -11,8 +11,9 @@ import { DEFAULT_CHUNKING } from '../chunk';
 import type { AskIndexFile } from '../index-file';
 import { embeddingFromSpec, EmbeddingSpecError } from '../node/embedding';
 import { nextRouting, type NextRouting } from '../node/next';
-import { DEFAULT_DIMENSIONS } from '../integration/build';
+import { checkIndexOptions, DEFAULT_DIMENSIONS } from '../integration/build';
 import { llmsOutputs, writeLlmsFiles } from '../integration/llms';
+import { checkOptions, optionRules } from '../integration/options';
 import { markdownCopies, resolveMarkdownLinks, rootedPath, type LlmsPage } from '../llms';
 import { dev } from './dev';
 import { evalCommand } from './eval';
@@ -176,8 +177,13 @@ async function chooseEmbedding(
   io: CliIO,
   mode: 'build' | 'check',
 ): Promise<EmbeddingChoice> {
-  const dims = flags.dimensions;
-  const spec = flags.embedding;
+  // The flags win over the config module's `embedding` and `dimensions`.
+  const dims = flags.dimensions ?? config.dimensions;
+  const spec = flags.embedding ?? config.embedding;
+  const name =
+    flags.embedding === undefined
+      ? `the config's embedding: '${String(spec)}'`
+      : `--embedding ${String(spec)}`;
 
   if (spec === undefined) {
     if (config.embeddingModel !== undefined) {
@@ -192,16 +198,21 @@ async function chooseEmbedding(
     // The default model at the plugins' default size, a third of its own, unless --dimensions
     // gives one. A model named with --embedding keeps its own size, as in the plugins.
     const size = dims ?? DEFAULT_DIMENSIONS;
-    if (io.env.OPENAI_API_KEY) return resolveSpec('openai:text-embedding-3-small', size, io, mode);
-    if (io.env.AI_GATEWAY_API_KEY)
-      return resolveSpec('openai/text-embedding-3-small', size, io, mode);
+    if (io.env.OPENAI_API_KEY) {
+      const model = 'openai:text-embedding-3-small';
+      return resolveSpec(model, size, io, mode, `--embedding ${model}`);
+    }
+    if (io.env.AI_GATEWAY_API_KEY) {
+      const model = 'openai/text-embedding-3-small';
+      return resolveSpec(model, size, io, mode, `--embedding ${model}`);
+    }
     throw new UsageError(
       'No embedding model. Set OPENAI_API_KEY or pass --embedding <spec>. To try it without a ' +
         'key, use --embedding mock (offline, deterministic); --embedding none builds a ' +
         'keyword-only index.',
     );
   }
-  return resolveSpec(spec, dims, io, mode);
+  return resolveSpec(spec, dims, io, mode, name);
 }
 
 async function resolveSpec(
@@ -209,19 +220,46 @@ async function resolveSpec(
   dims: number | undefined,
   io: CliIO,
   mode: 'build' | 'check',
+  name: string,
 ): Promise<EmbeddingChoice> {
   try {
     return await embeddingFromSpec(spec, {
       ...(dims ? { dimensions: dims } : {}),
       env: io.env,
       mode,
-      name: `--embedding ${spec}`,
+      name,
     });
   } catch (error) {
     if (error instanceof EmbeddingSpecError) throw new UsageError(error.message);
     throw error;
   }
 }
+
+const { anything, boolean, func, listOf, number, object, oneOf, shape, string } = optionRules;
+
+/** A config module's options, checked as it gives them. */
+const CONFIG_RULES = shape<AskConfig>({
+  embedding: string,
+  dimensions: number,
+  embeddingModel: anything,
+  embeddingProviderOptions: object,
+  chunking: optionRules.chunking,
+  baseUrl: string,
+  ignore: listOf(string, "a list of globs, such as ['drafts/**']"),
+  // Checked with the flag, with its message.
+  framework: anything,
+  cleanUrls: boolean,
+  documents: oneOf(listOf(object, 'a list of documents'), func),
+  llmsTxt: shape<NonNullable<AskConfig['llmsTxt']>>({
+    title: string,
+    description: string,
+    siteUrl: string,
+    mcp: string,
+    index: boolean,
+    full: boolean,
+    markdown: boolean,
+  }),
+});
 
 async function loadConfig(path: string | undefined, io: CliIO): Promise<AskConfig> {
   if (!path) return {};
@@ -231,6 +269,12 @@ async function loadConfig(path: string | undefined, io: CliIO): Promise<AskConfi
   const config = module.default;
   if (!config || typeof config !== 'object') {
     throw new UsageError(`${path} must export a config object as its default export.`);
+  }
+  try {
+    checkOptions(path, CONFIG_RULES, config);
+    checkIndexOptions(config);
+  } catch (error) {
+    throw new UsageError((error as Error).message);
   }
   return config;
 }

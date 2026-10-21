@@ -10,6 +10,7 @@ import type { AstroConfig, AstroIntegration } from 'astro';
 import {
   buildEmbedding,
   checkIndexOptions,
+  checkOptions,
   dialogEndpoint,
   excluder,
   hintDevEndpoint,
@@ -18,6 +19,7 @@ import {
   launcherScript,
   llmsOutputs,
   loadBuiltPage,
+  optionRules,
   quietUseClient,
   readBuiltHtml,
   resolveMcp,
@@ -31,6 +33,7 @@ import {
   type McpOption,
   type OndocsDialogOptions as DialogOptions,
   type OndocsTheme,
+  type OptionRules,
   type SourceDocument,
 } from '../integration';
 import type { BuiltFiles, RouteSettings } from './route';
@@ -120,8 +123,21 @@ export interface OndocsOptions extends IndexOptions {
    * `<article>`s, then its `<body>`). With any other selector, a page where it matches nothing is
    * not indexed.
    */
+  contentSelector?: string;
+  /**
+   * Elements to leave out of `contentSelector`, as a selector like it, e.g. `.toc, .comments`. To
+   * leave out whole pages, use `exclude`.
+   */
+  ignoreSelector?: string;
+  /**
+   * @deprecated Use `contentSelector`, which takes the same selector. `content` still works, with a
+   * warning, until 1.0.
+   */
   content?: string;
-  /** Elements to leave out of `content`, as a selector like it, e.g. `.toc, .comments`. */
+  /**
+   * @deprecated Use `ignoreSelector`, which takes the same selector. `ignore` still works, with a
+   * warning, until 1.0.
+   */
   ignore?: string;
   /** Where the index is written in the build output, and served from. Default `ask-index.json`. */
   indexFile?: string;
@@ -204,9 +220,9 @@ export function navbarModuleCode({
 export interface IntegrationPreset {
   /** A button in the header, which the framework's own component renders. */
   navbar?: NavbarButtons;
-  /** The selector of each page's content, instead of `content`. */
+  /** The selector of each page's content, instead of `contentSelector`. */
   content?: string;
-  /** The selector of what to leave out, instead of `ignore`. */
+  /** The selector of what to leave out, instead of `ignoreSelector`. */
   ignore?: string;
   /** Locale path prefixes that get an index of their own. Default: from Astro's `i18n`. */
   locales?: string[];
@@ -229,11 +245,98 @@ export interface IntegrationPreset {
   stylesheets?: string[];
 }
 
+const { boolean, literal, number, oneOf, selector, shape, string } = optionRules;
+
+/** `route`'s options, checked as the config gives them. */
+const routeRules = shape<OndocsRouteOptions>({
+  model: string,
+  rateLimit: oneOf(number, literal(false)),
+  mcpRateLimit: oneOf(number, literal(false)),
+  trustedHeader: string,
+  budget: oneOf(
+    literal(false),
+    shape<{ requestsPerDay?: number; tokensPerDay?: number }>({
+      requestsPerDay: number,
+      tokensPerDay: number,
+    }),
+  ),
+  answerCache: boolean,
+  mcp: oneOf(string, literal(false)),
+  siteName: string,
+});
+
+const astroDialogRules: OptionRules<OndocsDialogOptions> = {
+  ...optionRules.dialog,
+  title: string,
+  theme: literal('auto', 'light', 'dark'),
+  locales: optionRules.locales,
+};
+
+const astroRules: OptionRules<OndocsOptions> = {
+  ...optionRules.index,
+  endpoint: string,
+  route: oneOf(literal(false), routeRules),
+  contentSelector: selector('main'),
+  ignoreSelector: selector('.toc, .comments'),
+  content: selector('main'),
+  ignore: selector('.toc, .comments'),
+  indexFile: string,
+  exclude: optionRules.exclude,
+  dialog: shape(astroDialogRules, {
+    renamed: optionRules.dialogRenamed,
+    hints: {
+      navbar:
+        'the header button is the Starlight plugin’s (ondocs/starlight). With ondocs/astro, the dialog opens from its floating button or ⌘/Ctrl+I.',
+    },
+  }),
+  mcp: optionRules.mcp,
+  llmsTxt: optionRules.llmsTxt,
+};
+
+/** What the Starlight plugin says to a selector option: it indexes what Starlight's search does. */
+const STARLIGHT_SELECTS =
+  'the Starlight plugin indexes what Starlight’s search does. Mark what to leave out with data-pagefind-ignore.';
+
+/** The options of each plugin built on this integration, by the name it goes by. */
+const PLUGIN_RULES = {
+  'ondocs/astro': shape(astroRules, {
+    deprecated: { content: 'contentSelector', ignore: 'ignoreSelector' },
+  }),
+  // The Starlight plugin picks each page's content itself, and its dialog takes `navbar`.
+  'ondocs/starlight': shape(
+    {
+      ...astroRules,
+      dialog: shape<OndocsDialogOptions & { navbar?: boolean | string }>(
+        { ...astroDialogRules, navbar: oneOf(boolean, string) },
+        { renamed: optionRules.dialogRenamed },
+      ),
+    },
+    {
+      notHere: {
+        contentSelector: STARLIGHT_SELECTS,
+        ignoreSelector: STARLIGHT_SELECTS,
+        content: STARLIGHT_SELECTS,
+        ignore: STARLIGHT_SELECTS,
+      },
+    },
+  ),
+};
+
 export function createIntegration(
   options: OndocsOptions,
   preset: IntegrationPreset,
 ): AstroIntegration {
+  // A framework that selects each page's content itself is Starlight, whose plugin calls this.
+  const plugin = preset.content === undefined ? 'ondocs/astro' : 'ondocs/starlight';
+  // Says once what `content` and `ignore` are called now.
+  checkOptions(plugin, PLUGIN_RULES[plugin], options);
   checkIndexOptions(options);
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- their names before 0.14, still read
+  const { content: oldContent, ignore: oldIgnore } = options;
+  const selectors: Selectors = {
+    content: preset.content ?? options.contentSelector ?? oldContent ?? 'main',
+    ignore: preset.ignore ?? options.ignoreSelector ?? oldIgnore,
+  };
   const routeOptions = options.route === false ? null : (options.route ?? {});
   const model = routeOptions?.model ?? DEFAULT_ROUTE_MODEL;
   if (!ROUTE_MODEL.test(model)) {
@@ -419,12 +522,13 @@ export function createIntegration(
           config,
           options,
           preset,
+          selectors,
           llms,
         );
         const total = [...groups.values()].reduce((sum, documents) => sum + documents.length, 0);
         if (total === 0) {
           logger.warn(
-            `None of the ${String(pages.length)} pages Astro built has content to index in ${preset.content ?? options.content ?? 'main'}, so there is no ${indexFile}.`,
+            `None of the ${String(pages.length)} pages Astro built has content to index in ${selectors.content}, so there is no ${indexFile}.`,
           );
           return;
         }
@@ -768,6 +872,12 @@ function astroDefaultLocale({ i18n }: AstroConfig): string | undefined {
     ?.path;
 }
 
+/** Each page's content and what to leave out of it, as selectors. */
+interface Selectors {
+  content: string;
+  ignore: string | undefined;
+}
+
 /**
  * The pages Astro built, as documents grouped by locale path prefix (`''` for the rest): each
  * page's content at the URL Astro serves it from, under `base`, with the trailing slash that
@@ -781,6 +891,7 @@ async function loadBuiltPages(
   config: AstroConfig,
   options: OndocsOptions,
   preset: IntegrationPreset,
+  { content: contentSelector, ignore: ignoreSelector }: Selectors,
   markdown: boolean,
 ): Promise<{ groups: Map<string, SourceDocument[]>; copies: Map<string, LlmsPage[]> }> {
   const locales = preset.locales ?? astroLocales(config);
@@ -792,8 +903,6 @@ async function loadBuiltPages(
   }
   const excluded = excluder(options.exclude ?? []);
   const base = config.base.replace(/\/+$/, '');
-  const root = preset.content ?? options.content ?? 'main';
-  const ignore = preset.ignore ?? options.ignore;
 
   for (const pathname of pages.map((page) => page.pathname.replace(/^\/+/, '')).sort()) {
     const path = pathname.replace(/\/+$/, '');
@@ -812,7 +921,12 @@ async function loadBuiltPages(
           ? base
           : `${base}/`
         : `${base}/${pathname}`;
-    const built = loadBuiltPage(html, { url, root, ignore, markdown });
+    const built = loadBuiltPage(html, {
+      url,
+      contentSelector,
+      ...(ignoreSelector ? { ignoreSelector } : {}),
+      markdown,
+    });
     if (!built) continue;
     groups.get(locale)?.push(built.document);
     if (built.page) copies.get(locale)?.push(built.page);

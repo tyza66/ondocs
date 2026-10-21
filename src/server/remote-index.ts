@@ -30,6 +30,14 @@ export interface RemoteIndexOptions {
   fetch?: (request: Request) => Promise<Response>;
   /** Extra request headers, such as a token for a protected preview deployment. */
   headers?: Record<string, string>;
+  /**
+   * Called when a check of the site fails and the index in hand keeps answering: the site is
+   * down, answers with an error such as a 404, or sends a file that does not load (one from a
+   * newer ondocs, or half deployed). Once per failure, until the file or the status changes or a
+   * check succeeds. Default: the `onError` of the handlers given this index, else `console.error`.
+   * The first fetch's failure is not passed here: it fails the request, which the handler reports.
+   */
+  onError?: (error: unknown) => void;
   /** Clock, for tests. */
   now?: () => number;
 }
@@ -47,6 +55,28 @@ interface Fetched {
   etag: string | null;
   lastModified: string | null;
   checkedAt: number;
+}
+
+/** The most handlers' reporters one index keeps: they are made once, so more is a leak. */
+const MAX_REPORTERS = 16;
+
+/** The `onError`s of the handlers given each remote index, which hear of its failed checks. */
+const reporters = new WeakMap<RemoteIndex, Set<(error: unknown) => void>>();
+
+/**
+ * Passes `source`'s failed checks to `report`, a handler's `onError`, when `source` is a
+ * {@link remoteIndex} without an `onError` of its own. The same function given by two handlers,
+ * as `createOndocs` gives it, hears of each failure once.
+ */
+export function reportRemoteIndexErrors(source: unknown, report: (error: unknown) => void): void {
+  if (!isLiveIndex(source)) return;
+  const set = reporters.get(source);
+  if (!set) return;
+  set.add(report);
+  if (set.size > MAX_REPORTERS) {
+    const [oldest] = set;
+    if (oldest) set.delete(oldest);
+  }
 }
 
 /**
@@ -87,6 +117,25 @@ export function remoteIndex(url: string | URL, options: RemoteIndexOptions = {})
   let current: Fetched | null = null;
   let pending: Promise<LoadedIndex> | null = null;
   let pendingSince = 0;
+  const listeners = new Set<(error: unknown) => void>();
+  // The failure last reported, so that each is reported once until something changes.
+  let reported: string | null = null;
+
+  /** Reports a failed check, once per failure, to `onError`, the handlers' or the console. */
+  const report = (key: string, error: Error): void => {
+    if (key === reported) return;
+    reported = key;
+    if (options.onError) {
+      options.onError(error);
+      return;
+    }
+    if (listeners.size === 0) {
+      console.error('[ondocs]', error);
+      return;
+    }
+    for (const listener of listeners) listener(error);
+  };
+  const KEEPS = 'so the endpoint keeps answering from the index it fetched before';
 
   const download = async (
     signal: AbortSignal,
@@ -104,12 +153,15 @@ export function remoteIndex(url: string | URL, options: RemoteIndexOptions = {})
     }
     if (response.status === 304 && current) {
       await response.body?.cancel();
+      reported = null;
       return keep(current);
     }
     if (!response.ok) {
       await response.body?.cancel();
-      if (current) return keep(current);
-      throw new Error(`Could not fetch the index at ${href}: HTTP ${String(response.status)}.`);
+      const status = `Could not fetch the index at ${href}: HTTP ${String(response.status)}`;
+      if (!current) throw new Error(`${status}.`);
+      report(`status ${String(response.status)}`, new Error(`${status}, ${KEEPS}.`));
+      return keep(current);
     }
     let text: string;
     try {
@@ -122,10 +174,21 @@ export function remoteIndex(url: string | URL, options: RemoteIndexOptions = {})
     try {
       index = loadIndex(text);
     } catch (error) {
-      // A half-deployed site, say: keep answering from the index that worked.
-      if (current) return keep(current);
-      throw error;
+      // A half-deployed site, or an index from a newer ondocs: keep answering from the index
+      // that worked, and say why, once for this file.
+      if (!current) throw error;
+      const file =
+        response.headers.get('etag') ?? response.headers.get('last-modified') ?? String(error);
+      report(
+        `file ${file}`,
+        new Error(
+          `The index at ${href} could not be loaded, ${KEEPS}: ${error instanceof Error ? error.message : String(error)}`,
+          { cause: error },
+        ),
+      );
+      return keep(current);
     }
+    reported = null;
     current = {
       index,
       etag: response.headers.get('etag'),
@@ -167,8 +230,10 @@ export function remoteIndex(url: string | URL, options: RemoteIndexOptions = {})
 
   /** A fetch that failed: a check keeps the index in hand, and the first fetch fails. */
   const failed = (error: unknown): LoadedIndex => {
-    if (current) return keep(current);
-    throw new Error(`Could not fetch the index at ${href}: ${String(error)}`, { cause: error });
+    const message = `Could not fetch the index at ${href}: ${String(error)}`;
+    if (!current) throw new Error(message, { cause: error });
+    report(`fetch ${String(error)}`, new Error(`${message}, ${KEEPS}.`, { cause: error }));
+    return keep(current);
   };
 
   /**
@@ -199,7 +264,9 @@ export function remoteIndex(url: string | URL, options: RemoteIndexOptions = {})
     return refresh().catch(() => held.index);
   };
 
-  return Object.assign(get, { [LIVE_INDEX]: true as const, url: href });
+  const remote: RemoteIndex = Object.assign(get, { [LIVE_INDEX]: true as const, url: href });
+  reporters.set(remote, listeners);
+  return remote;
 }
 
 /** Whether `source` is a {@link remoteIndex}, which the handlers call on every request. */
