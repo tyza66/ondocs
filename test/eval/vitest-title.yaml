@@ -1,0 +1,148 @@
+# Questions about Vitest asked on Stack Overflow under the vitest tag, as their askers
+# titled them, each with the pages of Vitest's docs that its accepted answer (or a
+# maintainer's) links, at vitest-dev/vitest@2899eb3; and 15 off-topic questions from other tags.
+# The questions are Stack Overflow's, CC BY-SA 4.0: README.md in this folder credits and links
+# each one, and says how its pages were chosen. CI scores the file on every change.
+#
+#   node scripts/corpus.mjs .corpus vitest
+#   ondocs index .corpus/vitest/docs --framework none --base-url / --ignore 'guide/examples/**' --ignore guide/cli-generated.md --ignore AGENTS.md -e none -o vitest.json
+#   ondocs eval test/eval/vitest-title.yaml --index vitest.json
+
+# Keyword-only, these docs score hit@1 5/26, hit@3 7/26, hit@5 7/26 and MRR 0.22,
+# refuse 4 of the 26 answerable questions, and answer 3 of the 15 off-topic ones. The
+# thresholds sit just under those scores: a change that loses a question fails CI, and has to
+# say why.
+thresholds:
+  hit@1: 0.19
+  hit@3: 0.26
+  hit@5: 0.26
+  mrr: 0.22
+  refusalPrecision: 0.75
+  refusalRecall: 0.8
+
+questions:
+  # https://stackoverflow.com/q/72146352
+  - question: "Vitest defineConfig, 'test' does not exist in type 'UserConfigExport'"
+    expect: /config
+  # https://stackoverflow.com/q/72277787
+  - question: 'Spying On/Mocking Import of an Import'
+    expect: /api/test
+  # https://stackoverflow.com/q/73309769
+  - question: 'How to test a React app with framer motion using Vitest?'
+    expect: /config/deps
+  # https://stackoverflow.com/q/73475208
+  - question: 'how to debug a test timing out waiting for React.lazy import'
+    expect: /config/environment
+  # https://stackoverflow.com/q/73581342
+  - question: "How to mock Nuxt's useLazyFetch method with Vitest"
+    expect: /guide/mocking
+  # https://stackoverflow.com/q/74049355
+  - question: 'vitest test coverage does not fail when threshold is not met'
+    expect: /config/coverage
+  # https://stackoverflow.com/q/74175246
+  - question: 'vitest global variables in setupfiles'
+    expect: /guide/environment
+  # https://stackoverflow.com/q/74487468
+  - question: 'How to write a unit test in vitest that expects an error'
+    expect: /api/expect
+  # https://stackoverflow.com/q/75006674
+  - question: 'Vitest with element plus unplugin unknown extension for scss'
+    expect: /config/deps
+  # https://stackoverflow.com/q/75423200
+  - question: 'Run a function before all the test modules in Vitest'
+    expect: /config/globalsetup
+  # https://stackoverflow.com/q/75817611
+  - question: 'Nuxt 3 project has a vitest and a playwright testing library to test. But running the vitest script also runs on the playwright test files'
+    expect: /config
+  # https://stackoverflow.com/q/75862183
+  - question: "Vitest in-source testing: Property 'vitest' does not exist on type 'ImportMeta'"
+    expect: /guide/in-source
+  # https://stackoverflow.com/q/75993613
+  - question: 'Typescript shows error during mocking axios in Vitest'
+    expect: /api/vi
+  # https://stackoverflow.com/q/76450464
+  - question: 'Vitest Mock Factory Never Called'
+    expect: /api/vi
+  # https://stackoverflow.com/q/76688213
+  - question: 'Unexpected Failure of Individual Assertions when Spying a Function with Different Arguments using vitest'
+    expect: /api/expect
+  # https://stackoverflow.com/q/77445761
+  - question: 'How to add matchers from jest-extended'
+    expect: /guide/extending-matchers
+  # https://stackoverflow.com/q/77452318
+  - question: 'Register custom plugins globally in vitest'
+    expect: /config/setupfiles
+  # https://stackoverflow.com/q/77749392
+  - question: 'Vitest error when using jest.mock: jest is not defined'
+    expect: /guide/mocking
+  # https://stackoverflow.com/q/77984344
+  - question: 'How to create unit test in Svelte using Vitest?'
+    expect: /config/environment
+  # https://stackoverflow.com/q/78334396
+  - question: 'Vitest - Mock React Component only in one test'
+    expect: /guide/mocking
+  # https://stackoverflow.com/q/78427221
+  - question: 'Unit testing code that fires at the end of the intro animation in Svelte'
+    expect: /config/environment
+  # https://stackoverflow.com/q/78493555
+  - question: "How can I run tests in a single file in parallel when using 'screen' from Testing Library?"
+    expect: [/guide/cli, /config/fileparallelism]
+  # https://stackoverflow.com/q/78936093
+  - question: 'Mocking graphql-request with vitest'
+    expect: /guide/mocking
+  # https://stackoverflow.com/q/78969363
+  - question: 'How to make vitest fail fast after first known test failure'
+    expect: /config/bail
+  # https://stackoverflow.com/q/79755163
+  - question: 'How to programmatically get vitest test name?'
+    expect: [/guide/test-context, /api/advanced/test-case]
+  # https://stackoverflow.com/q/79830595
+  - question: 'Initializing service values before tests using Angular 21 and Vitest'
+    expect: /config/setupfiles
+
+  # Off-topic: the most-voted questions of three other tags.
+  # https://stackoverflow.com/q/1330989 (ggplot2)
+  - question: 'Rotating and spacing axis labels in ggplot2'
+    unanswerable: true
+  # https://stackoverflow.com/q/12675147 (ggplot2)
+  - question: 'How can we make xkcd style graphs?'
+    unanswerable: true
+  # https://stackoverflow.com/q/2564258 (ggplot2)
+  - question: 'Plot two graphs in a same plot'
+    unanswerable: true
+  # https://stackoverflow.com/q/14622421 (ggplot2)
+  - question: 'How to change legend title in ggplot'
+    unanswerable: true
+  # https://stackoverflow.com/q/1249548 (ggplot2)
+  - question: 'Side-by-side plots with ggplot2'
+    unanswerable: true
+  # https://stackoverflow.com/q/40352684 (kotlin)
+  - question: 'What is the equivalent of Java static methods in Kotlin?'
+    unanswerable: true
+  # https://stackoverflow.com/q/6217378 (kotlin)
+  - question: 'Place cursor at the end of text in EditText'
+    unanswerable: true
+  # https://stackoverflow.com/q/16336500 (kotlin)
+  - question: 'Kotlin Ternary Conditional Operator'
+    unanswerable: true
+  # https://stackoverflow.com/q/23353173 (kotlin)
+  - question: 'Unfortunately MyApp has stopped. How can I solve this?'
+    unanswerable: true
+  # https://stackoverflow.com/q/37618738 (kotlin)
+  - question: 'How to check if a "lateinit" variable has been initialized?'
+    unanswerable: true
+  # https://stackoverflow.com/q/874461 (matlab)
+  - question: 'Read .mat files in Python'
+    unanswerable: true
+  # https://stackoverflow.com/q/3627107 (matlab)
+  - question: 'How can I index a MATLAB array returned by a function without first assigning it to a local variable?'
+    unanswerable: true
+  # https://stackoverflow.com/q/12084246 (matlab)
+  - question: 'Differences between Octave and MATLAB'
+    unanswerable: true
+  # https://stackoverflow.com/q/12995434 (matlab)
+  - question: 'Representing and solving a maze given an image'
+    unanswerable: true
+  # https://stackoverflow.com/q/12701841 (matlab)
+  - question: 'xkcd style graphs in MATLAB'
+    unanswerable: true

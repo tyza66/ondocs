@@ -1,26 +1,31 @@
 // `ondocs eval`: scores retrieval against questions with known answers, for CI. It runs what
 // the endpoint runs before the model (embedding, hybrid retrieval and the relevance gate), so it
 // costs one embedding call per question at most, and no model call. Node.js only.
+import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { relative, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 
-import { embed } from 'ai';
+import { embed, type EmbeddingModel } from 'ai';
 import { parse as parseYaml } from 'yaml';
 import { z } from 'zod';
 
-import { readIndexFile } from '../node';
+import { embeddingModelId, sameEmbeddingModel, type EmbeddingProviderOptions } from '../build';
+import { readIndexFile, type AskConfig } from '../node';
 import { loadIndex, retrieve, type LoadedIndex, type RetrievalOptions } from '../search/retrieve';
+import { tokenize } from '../text/tokenize';
 import { devModels, DevError, INDEX_FILES } from './dev';
 import type { CliIO } from './main';
 
 export const EVAL_USAGE = `Usage: ondocs eval <questions.yaml> [options]
 
 Scores retrieval against questions whose answers you know: for each question, whether the pages
-it names come first (hit@1) or in the top three (hit@3), and for questions marked unanswerable,
-whether the relevance gate refuses them (refusal precision and recall). It runs what the
-endpoint runs before the model, embedding each question as the index was, so it calls no
-language model. It exits 1 when a score is under its threshold, for CI.
+it names come first (hit@1), in the top three (hit@3) or five (hit@5), and how high on average
+(MRR), and for questions marked unanswerable, whether the relevance gate refuses them (refusal
+precision and recall). It runs what the endpoint runs before the model, embedding each question
+as the index was, so it calls no language model. It exits 1 when a score is under its threshold,
+for CI.
 
   questions:
     - question: How do I deploy to GitHub Pages?
@@ -37,15 +42,20 @@ Options:
                                      or .vitepress/dist/ask-index.json, at the root or in docs/)
       --min-hit-at-1 <n>             Thresholds from 0 to 1, over the file's
       --min-hit-at-3 <n>
+      --min-hit-at-5 <n>
+      --min-mrr <n>
       --min-refusal-precision <n>
       --min-refusal-recall <n>
+  -c, --config <file>                The config module the index was built with (ondocs index -c):
+                                     questions are embedded with its embeddingModel
       --keyword-only                 Search by keywords only, embedding nothing
       --json                         Print the report as JSON
   -h, --help                         Show this help
 
-Questions are embedded with the model the index records: the mock model offline, OpenAI or AI
-Gateway with OPENAI_API_KEY or AI_GATEWAY_API_KEY, Workers AI with CLOUDFLARE_ACCOUNT_ID and
-CLOUDFLARE_API_TOKEN. .env and .env.local in the working directory are loaded first.`;
+Questions are embedded with the config's embeddingModel, else with the model the index records:
+the mock model offline, OpenAI or AI Gateway with OPENAI_API_KEY or AI_GATEWAY_API_KEY, Workers
+AI with CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN. .env and .env.local in the working
+directory are loaded first.`;
 
 const unit = z.number().min(0).max(1);
 
@@ -66,6 +76,8 @@ const fileSchema = z.object({
     .object({
       'hit@1': unit,
       'hit@3': unit,
+      'hit@5': unit,
+      mrr: unit,
       refusalPrecision: unit,
       refusalRecall: unit,
     })
@@ -101,9 +113,15 @@ export interface EvalResult {
   refused: boolean;
   /** Where the first expected page came, from 1, among the distinct pages found; null if not found. */
   rank: number | null;
-  /** The first three distinct pages (or sections, where `expect` names one) found. */
+  /** The first five distinct pages (or sections, where `expect` names one) found. */
   found: string[];
   best: { similarity: number | null; keywordCoverage: number };
+  /**
+   * The question's words that no chunk of the index contains, as the search splits them. For a
+   * refused question they say whether the docs lack its words (embeddings match meaning without
+   * them) or have them too thinly (a lower `minKeywordCoverage` lets it through).
+   */
+  absent: string[];
 }
 
 export interface EvalReport {
@@ -111,7 +129,11 @@ export interface EvalReport {
   chunks: number;
   retrieval: 'hybrid' | 'keyword';
   results: EvalResult[];
-  /** Each score, its counts, and its threshold when one is set; `null` when nothing counts toward it. */
+  /**
+   * Each score, its counts, and its threshold when one is set; `null` when nothing counts toward
+   * it. For `mrr`, the mean of 1/rank over the answerable questions (0 when the page is not
+   * found), `count` is the sum of those reciprocal ranks.
+   */
   scores: Record<
     Metric,
     { value: number | null; count: number; of: number; threshold?: number; pass: boolean }
@@ -128,6 +150,18 @@ const normalize = (url: string): string => {
   return anchor === undefined ? clean : `${clean}#${anchor}`;
 };
 const pageOf = (url: string): string => normalize(url).split('#')[0] ?? '';
+
+/** How many distinct pages a result keeps, for hit@5. */
+const FOUND = 5;
+
+/**
+ * The words of `question` that no chunk contains. BM25 gives a word on no chunk the highest IDF,
+ * the same as the empty string's, which is never a word.
+ */
+function absentWords(index: LoadedIndex, question: string): string[] {
+  const unseen = index.bm25.idf('');
+  return [...new Set(tokenize(question))].filter((term) => index.bm25.idf(term) === unseen);
+}
 
 /** Runs the questions against `index` and scores them. */
 export async function evaluate(
@@ -161,8 +195,9 @@ export async function evaluate(
       unanswerable: !('expect' in entry),
       refused: !result.answerable,
       rank: position === -1 ? null : position + 1,
-      found: found.slice(0, 3),
+      found: found.slice(0, FOUND),
       best: result.best,
+      absent: absentWords(index, entry.question),
     });
   }
 
@@ -170,6 +205,8 @@ export async function evaluate(
   const unanswerable = results.filter((result) => result.unanswerable);
   const refused = results.filter((result) => result.refused);
   const rightlyRefused = refused.filter((result) => result.unanswerable);
+  const hitAt = (k: number) =>
+    answerable.filter((result) => result.rank !== null && result.rank <= k).length;
   const score = (metric: Metric, count: number, of: number) => {
     const value = of === 0 ? null : count / of;
     const threshold = thresholds[metric];
@@ -178,14 +215,12 @@ export async function evaluate(
     return { value, count, of, ...(threshold === undefined ? {} : { threshold }), pass };
   };
   const scores = {
-    'hit@1': score(
-      'hit@1',
-      answerable.filter((result) => result.rank === 1).length,
-      answerable.length,
-    ),
-    'hit@3': score(
-      'hit@3',
-      answerable.filter((result) => result.rank !== null && result.rank <= 3).length,
+    'hit@1': score('hit@1', hitAt(1), answerable.length),
+    'hit@3': score('hit@3', hitAt(3), answerable.length),
+    'hit@5': score('hit@5', hitAt(5), answerable.length),
+    mrr: score(
+      'mrr',
+      answerable.reduce((sum, result) => sum + (result.rank === null ? 0 : 1 / result.rank), 0),
       answerable.length,
     ),
     refusalPrecision: score('refusalPrecision', rightlyRefused.length, refused.length),
@@ -213,6 +248,8 @@ function numberFlag(name: string, value: string | undefined): number | undefined
 const LABELS: Record<Metric, string> = {
   'hit@1': 'hit@1',
   'hit@3': 'hit@3',
+  'hit@5': 'hit@5',
+  mrr: 'MRR',
   refusalPrecision: 'refusal precision',
   refusalRecall: 'refusal recall',
 };
@@ -234,6 +271,7 @@ function printReport(report: EvalReport, io: CliIO): void {
     } else if (result.refused) {
       mark = '✗ refused ';
       detail = `expected ${result.expect.join(' or ')}`;
+      if (result.absent.length > 0) detail += `; not in the docs: ${result.absent.join(', ')}`;
     } else {
       mark =
         result.rank !== null && result.rank <= 3 ? `✓ ${String(result.rank)}       ` : '✗ -       ';
@@ -248,14 +286,25 @@ function printReport(report: EvalReport, io: CliIO): void {
     EvalReport['scores'][Metric],
   ][]) {
     const value = entry.value === null ? 'n/a ' : entry.value.toFixed(2);
+    const count = metric === 'mrr' ? entry.count.toFixed(2) : String(entry.count);
     const against =
       entry.threshold === undefined
         ? ''
         : `  threshold ${String(entry.threshold)} ${entry.pass ? '✓' : '✗'}`;
-    io.stdout(
-      `  ${LABELS[metric].padEnd(18)} ${value}  (${String(entry.count)}/${String(entry.of)})${against}`,
-    );
+    io.stdout(`  ${LABELS[metric].padEnd(18)} ${value}  (${count}/${String(entry.of)})${against}`);
   }
+}
+
+/** The config module at `path`, as `ondocs index -c` loads it. */
+async function loadConfig(path: string, io: CliIO): Promise<AskConfig> {
+  const absolute = resolve(io.cwd, path);
+  if (!existsSync(absolute)) throw new EvalError(`Config file not found: ${path}`);
+  const module = (await import(pathToFileURL(absolute).href)) as { default?: unknown };
+  const config = module.default;
+  if (!config || typeof config !== 'object') {
+    throw new EvalError(`${path} must export a config object as its default export.`);
+  }
+  return config;
 }
 
 /** Runs `ondocs eval`. Returns the exit code: 0 at or over every threshold, 1 under one, 2 usage. */
@@ -271,8 +320,11 @@ export async function evalCommand(args: string[], io: CliIO): Promise<number> {
         index: { type: 'string' },
         'min-hit-at-1': { type: 'string' },
         'min-hit-at-3': { type: 'string' },
+        'min-hit-at-5': { type: 'string' },
+        'min-mrr': { type: 'string' },
         'min-refusal-precision': { type: 'string' },
         'min-refusal-recall': { type: 'string' },
+        config: { type: 'string', short: 'c' },
         'keyword-only': { type: 'boolean' },
         json: { type: 'boolean' },
         help: { type: 'boolean', short: 'h' },
@@ -311,6 +363,8 @@ export async function evalCommand(args: string[], io: CliIO): Promise<number> {
     const flags: [Metric, string][] = [
       ['hit@1', 'min-hit-at-1'],
       ['hit@3', 'min-hit-at-3'],
+      ['hit@5', 'min-hit-at-5'],
+      ['mrr', 'min-mrr'],
       ['refusalPrecision', 'min-refusal-precision'],
       ['refusalRecall', 'min-refusal-recall'],
     ];
@@ -344,23 +398,42 @@ export async function evalCommand(args: string[], io: CliIO): Promise<number> {
 
     let embedQuestion: ((question: string) => Promise<number[]>) | null = null;
     let retrieval: RetrievalOptions = {};
+    const config = typeof values.config === 'string' ? await loadConfig(values.config, io) : {};
     if (!values['keyword-only'] && indexFile.embedding) {
-      let models;
-      try {
-        models = await devModels(indexFile, io.env);
-      } catch (error) {
-        if (error instanceof DevError) {
-          throw new EvalError(`${error.message} Or pass --keyword-only.`);
+      let embeddingModel: EmbeddingModel | undefined;
+      let embeddingProviderOptions: EmbeddingProviderOptions | undefined;
+      if (config.embeddingModel) {
+        // The config's model, as `ondocs index -c` embedded the pages with it: any provider,
+        // with no key here unless that provider needs one.
+        const id = embeddingModelId(config.embeddingModel);
+        if (!sameEmbeddingModel(indexFile.embedding.model, id)) {
+          throw new EvalError(
+            `The index was embedded with ${indexFile.embedding.model}, but ${String(values.config)} embeds with ${id}. Pass the config the index was built with, or rebuild the index with this one.`,
+          );
         }
-        throw error;
+        embeddingModel = config.embeddingModel;
+        embeddingProviderOptions = config.embeddingProviderOptions;
+      } else {
+        let models;
+        try {
+          models = await devModels(indexFile, io.env);
+        } catch (error) {
+          if (error instanceof DevError) {
+            throw new EvalError(
+              `${error.message} Or pass -c with the config module that embeds with it, or --keyword-only.`,
+            );
+          }
+          throw error;
+        }
+        retrieval = models.retrieval ?? {};
+        ({ embeddingModel, embeddingProviderOptions } = models);
       }
-      retrieval = models.retrieval ?? {};
-      const { embeddingModel, embeddingProviderOptions } = models;
       if (embeddingModel) {
+        const model = embeddingModel;
         embedQuestion = async (question) =>
           (
             await embed({
-              model: embeddingModel,
+              model,
               value: question,
               maxRetries: 2,
               ...(embeddingProviderOptions ? { providerOptions: embeddingProviderOptions } : {}),

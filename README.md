@@ -155,7 +155,7 @@ gemini mcp add --transport http --scope user acme-docs https://docs.acme.dev/api
 
 - **Protocol.** MCP 2026-07-28, and 2025-11-25 back to 2024-11-05 for clients that start with `initialize`, tested with the official TypeScript client.
 - **Tools.** `search` returns ranked sections with a snippet and an anchor URL, and `fetch` a page or section as Markdown, as ChatGPT's connectors expect.
-- **Quality.** On docusaurus.io's docs, keyword search puts the right page in the top three for 22 of 22 agent-style queries we wrote in the docs' terms, and 20 of 22 asked as a person asks: a best case, checked in CI ([the queries](https://github.com/dgesteves/ondocs/blob/main/test/corpus.test.ts)). A reader's own words find it less often.
+- **Quality.** On docusaurus.io's docs, keyword search puts the right page in the top three for 22 of 22 agent-style queries we wrote in the docs' terms, and 20 of 22 asked as a person asks: a best case, checked in CI ([the queries](https://github.com/dgesteves/ondocs/blob/main/test/corpus.test.ts)). A reader's own words find it less often ([real Stack Overflow questions](https://ondocs.vercel.app/docs/quality#real-questions-from-stack-overflow)).
 - **On your docs.** With the plugins' `mcp` option, a page can show an "Add to Cursor / VS Code / Claude" block.
 - **llms.txt.** The plugins write it by default, and the CLI with `--llms-txt <dir>`.
 

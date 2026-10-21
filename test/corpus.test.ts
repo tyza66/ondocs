@@ -118,6 +118,8 @@ const NEEDS: [question: string, query: string, pages: string[]][] = [
 const SCORES = {
   'hit@1': '14/22',
   'hit@3': '19/22',
+  'hit@5': '19/22',
+  mrr: '0.73',
   refusalPrecision: '6/7',
   refusalRecall: '6/6',
 };
@@ -139,14 +141,14 @@ async function evalScores(index: AskIndexFile) {
       { cwd: dir, env: {}, stdout: (line) => out.push(line), stderr: () => undefined },
     );
     const { scores } = JSON.parse(out.join('\n')) as {
-      scores: Record<string, { count: number; of: number }>;
+      scores: Record<string, { value: number; count: number; of: number }>;
     };
     return {
       code,
       scores: Object.fromEntries(
-        Object.entries(scores).map(([name, { count, of }]) => [
+        Object.entries(scores).map(([name, { value, count, of }]) => [
           name,
-          `${String(count)}/${String(of)}`,
+          name === 'mrr' ? value.toFixed(2) : `${String(count)}/${String(of)}`,
         ]),
       ),
     };

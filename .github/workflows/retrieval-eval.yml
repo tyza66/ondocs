@@ -1,16 +1,19 @@
 name: Retrieval eval
 
-# Retrieval on docusaurus.io's docs with OpenAI's embeddings, which CI's keyword-only eval cannot
-# measure without a key: scripts/retrieval-eval.mjs indexes the docs at the commit
-# scripts/corpus.mjs pins with text-embedding-3-small at 512 dimensions, runs `ondocs eval` on
-# test/eval/docusaurus.io.yaml at minSimilarity 0.15 to 0.40, and writes the report to the run's
+# Retrieval on real docs with OpenAI's embeddings, which CI's keyword-only evals cannot measure
+# without a key: scripts/retrieval-eval.mjs indexes docusaurus.io's, Astro's and Vitest's docs at
+# the commits scripts/corpus.mjs pins with text-embedding-3-small at 512 dimensions, runs
+# `ondocs eval` on test/eval/docusaurus.io.yaml and on the Stack Overflow questions of
+# test/eval/<corpus>-title.yaml at minSimilarity 0.15 to 0.40, and writes the report to the run's
 # summary and an artifact. On demand only, with the OPENAI_API_KEY repository secret: it never
 # runs on a push or a pull request.
 #
-# Cost: before it embeds anything, the run counts the chunks with a keyword-only build and stops
-# if there are more than MAX_CHUNKS. The pinned docs are 1,070 chunks of at most 1,200 characters,
-# about 716,000 characters with their page titles and headings, and fewer tokens than characters.
-# A failed batch is tried at most three times, and the 28 questions are embedded once per gate.
+# Cost: before it embeds anything, the run counts each docs folder's chunks with a keyword-only
+# build, and stops if one has more than MAX_CHUNKS. The pinned docs are 1,070, 4,805 and 2,233
+# chunks of at most 1,200 characters: about 716,000, 2,766,000 and 1,467,000 characters with
+# their page titles and headings, 4.95 million in all, and fewer tokens than characters. A failed
+# batch is tried at most three times, and the 227 questions of the four files are embedded once
+# per gate, six times.
 on:
   workflow_dispatch:
 
@@ -23,11 +26,11 @@ concurrency:
 
 jobs:
   eval:
-    name: docusaurus.io's docs, text-embedding-3-small at 512 dimensions
+    name: Three docs sites, text-embedding-3-small at 512 dimensions
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     env:
-      MAX_CHUNKS: 1500
+      MAX_CHUNKS: 5000
     steps:
       - name: Check that the OpenAI key is set
         env:
@@ -47,7 +50,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
-      - name: Fetch docusaurus.io's docs at the pinned commit
+      - name: Fetch docusaurus.io's, Astro's and Vitest's docs at the pinned commits
         run: node scripts/corpus.mjs
       # The key goes to this step only, not to the install or the build.
       - name: Index with text-embedding-3-small and score it
@@ -56,14 +59,14 @@ jobs:
         run: node scripts/retrieval-eval.mjs --out "$RUNNER_TEMP/retrieval-eval" --max-chunks "$MAX_CHUNKS"
       - name: Write the report to the run's summary
         run: cat "$RUNNER_TEMP/retrieval-eval/report.md" >> "$GITHUB_STEP_SUMMARY"
-      - name: Keep the report, the index and the questions as an artifact
+      - name: Keep the report, the indexes and the questions as an artifact
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: retrieval-eval
           path: |
             ${{ runner.temp }}/retrieval-eval/report.json
             ${{ runner.temp }}/retrieval-eval/report.md
-            ${{ runner.temp }}/retrieval-eval/ask-index.json
-            ${{ runner.temp }}/retrieval-eval/questions-*.yaml
+            ${{ runner.temp }}/retrieval-eval/*/ask-index.json
+            ${{ runner.temp }}/retrieval-eval/*/questions-*.yaml
           if-no-files-found: error
           retention-days: 90

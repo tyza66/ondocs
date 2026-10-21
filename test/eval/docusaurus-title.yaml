@@ -1,0 +1,170 @@
+# Questions about Docusaurus asked on Stack Overflow under the docusaurus tag, as their askers
+# titled them, each with the pages of docusaurus.io's docs that its accepted answer (or a
+# maintainer's) links, at facebook/docusaurus@c245217; and 15 off-topic questions from other tags.
+# The questions are Stack Overflow's, CC BY-SA 4.0: README.md in this folder credits and links
+# each one, and says how its pages were chosen. CI scores the file on every change.
+#
+#   node scripts/corpus.mjs .corpus docusaurus
+#   ondocs index .corpus/docusaurus/website/docs --framework docusaurus --base-url /docs -e none -o docusaurus.json
+#   ondocs eval test/eval/docusaurus-title.yaml --index docusaurus.json
+
+# Keyword-only, these docs score hit@1 5/33, hit@3 8/33, hit@5 10/33 and MRR 0.21,
+# refuse 3 of the 33 answerable questions, and answer 2 of the 15 off-topic ones. The
+# thresholds sit just under those scores: a change that loses a question fails CI, and has to
+# say why.
+thresholds:
+  hit@1: 0.15
+  hit@3: 0.24
+  hit@5: 0.3
+  mrr: 0.21
+  refusalPrecision: 0.81
+  refusalRecall: 0.86
+
+questions:
+  # https://stackoverflow.com/q/53080767
+  - question: 'Docusaurus CNAME file is deleted after each build'
+    expect: /docs/deployment
+  # https://stackoverflow.com/q/57335600
+  - question: 'Publish a change: error Command "publish-gh-pages" not found'
+    expect: /docs/deployment
+  # https://stackoverflow.com/q/58665817
+  - question: 'Redirect to docs from landing page in docusaurus v2'
+    expect: /docs/docusaurus-core
+  # https://stackoverflow.com/q/60594771
+  - question: 'Subdomain instead of path for blog in Docusaurus v2'
+    expect: /docs/blog
+  # https://stackoverflow.com/q/60694553
+  - question: 'How to change the body direction of docs in Docusaurus?'
+    expect: /docs/cli
+  # https://stackoverflow.com/q/60783595
+  - question: 'Is there a way to have two docs in Docusaurus 2?'
+    expect:
+      [/docs/api/plugins/@docusaurus/plugin-content-docs, /docs/docs-multi-instance, /docs/sidebar]
+  # https://stackoverflow.com/q/61623511
+  - question: 'Deployment of Docusaurus website to PCF (Pivotal Cloud Foundry)'
+    expect: /docs/deployment
+  # https://stackoverflow.com/q/61892657
+  - question: 'Docusaurus v2 and GraphQL Playground integration'
+    expect: /docs/docusaurus-core
+  # https://stackoverflow.com/q/61917434
+  - question: 'Change button navigation text "Next" / "Previous"'
+    expect: /docs/swizzling
+  # https://stackoverflow.com/q/61999271
+  - question: 'How to set "Docs" as the main page'
+    expect: /docs/docs-introduction
+  # https://stackoverflow.com/q/62330048
+  - question: 'Adding Bootstrap JavaScript to Docusaurus but having issues'
+    expect: /docs/api/plugin-methods
+  # https://stackoverflow.com/q/64486276
+  - question: 'Is there a way to use Docusaurus just for the /docs directory?'
+    expect: /docs/docs-introduction
+  # https://stackoverflow.com/q/64941602
+  - question: 'Hook into React Router events in Docusarus?'
+    expect: /docs/markdown-features
+  # https://stackoverflow.com/q/66762693
+  - question: 'Change base /docs/ path to /home/ | Docusaurus'
+    expect: /docs/using-plugins
+  # https://stackoverflow.com/q/68091978
+  - question: 'Is there any way to render a html file in a markdown post with Docusaurus?'
+    expect: /docs/markdown-features/react
+  # https://stackoverflow.com/q/68188130
+  - question: 'Docusaurus - How to remove TOC(table of contents)?'
+    expect: /docs/api/plugins/@docusaurus/plugin-content-docs
+  # https://stackoverflow.com/q/68923998
+  - question: 'How can I start Docusaurus as a service on Linux (Ubuntu)'
+    expect: /docs/deployment
+  # https://stackoverflow.com/q/69192612
+  - question: "Docsearch on subpath '/docs' not scraping side navigation"
+    expect: /docs/api/docusaurus-config
+  # https://stackoverflow.com/q/69532616
+  - question: 'In Docusaurus, is there can I preserve capitalization in anchors created from headings in docs?'
+    expect: /docs/markdown-features/toc
+  # https://stackoverflow.com/q/69649119
+  - question: 'Docusaurus: is it possible to use components from NPM packages?'
+    expect: /docs/swizzling
+  # https://stackoverflow.com/q/69788759
+  - question: 'Collapse sidebar (Table of Contents, left side) section'
+    expect: /docs/sidebar
+  # https://stackoverflow.com/q/73427612
+  - question: 'Docusaurus Cannot link .md files to one another without removing file extension'
+    expect: /docs/markdown-features/links
+  # https://stackoverflow.com/q/73495206
+  - question: 'How to use the "block link" in Docusaurus'
+    expect: /docs/sidebar/items
+  # https://stackoverflow.com/q/73619703
+  - question: 'Import and show file content in MDX code blocks'
+    expect: /docs/markdown-features/react
+  # https://stackoverflow.com/q/73900280
+  - question: 'Where do I control sitemap for Docusarus?'
+    expect: /docs/api/plugins/@docusaurus/plugin-sitemap
+  # https://stackoverflow.com/q/74629056
+  - question: 'How i18n works for Docusaurus src/components?'
+    expect: /docs/i18n/tutorial
+  # https://stackoverflow.com/q/75229184
+  - question: 'Docusaurus: How can I have multiple versions of different docs in the docs directory?'
+    expect: /docs/docs-multi-instance
+  # https://stackoverflow.com/q/75328674
+  - question: 'How do I customize the generated index page in Docusaurus?'
+    expect: [/docs/sidebar/items, /docs/api/plugins/@docusaurus/plugin-content-docs]
+  # https://stackoverflow.com/q/75409516
+  - question: 'Docusaurus: add custom button to code block?'
+    expect: [/docs/swizzling, /docs/markdown-features/code-blocks]
+  # https://stackoverflow.com/q/75429585
+  - question: 'Docusaurus make full page background gradient'
+    expect: /docs/swizzling
+  # https://stackoverflow.com/q/77443614
+  - question: "docusaurus won't pick up my translated markdown files"
+    expect: /docs/i18n/tutorial
+  # https://stackoverflow.com/q/77601158
+  - question: 'Is there a way to use variable as URL in a MDX markdown link tag?'
+    expect: /docs/api/docusaurus-config
+  # https://stackoverflow.com/q/79346471
+  - question: "In Docusaurus markdown link inside details won't parse"
+    expect: /docs/markdown-features
+
+  # Off-topic: the most-voted questions of three other tags.
+  # https://stackoverflow.com/q/16476924 (pandas)
+  - question: 'How can I iterate over rows in a Pandas DataFrame?'
+    unanswerable: true
+  # https://stackoverflow.com/q/17071871 (pandas)
+  - question: 'How do I select rows from a DataFrame based on column values?'
+    unanswerable: true
+  # https://stackoverflow.com/q/332289 (pandas)
+  - question: 'How do I change the size of figures drawn with Matplotlib?'
+    unanswerable: true
+  # https://stackoverflow.com/q/11346283 (pandas)
+  - question: 'Renaming column names in Pandas'
+    unanswerable: true
+  # https://stackoverflow.com/q/13411544 (pandas)
+  - question: 'Delete a column from a Pandas DataFrame'
+    unanswerable: true
+  # https://stackoverflow.com/q/56433665 (swiftui)
+  - question: 'What is the "some" keyword in Swift(UI)?'
+    unanswerable: true
+  # https://stackoverflow.com/q/56443535 (swiftui)
+  - question: 'SwiftUI text-alignment'
+    unanswerable: true
+  # https://stackoverflow.com/q/56437036 (swiftui)
+  - question: 'How do I change the background color of a SwiftUI View?'
+    unanswerable: true
+  # https://stackoverflow.com/q/56973959 (swiftui)
+  - question: 'SwiftUI: How to implement a custom init with @Binding variables'
+    unanswerable: true
+  # https://stackoverflow.com/q/56760335 (swiftui)
+  - question: 'How can I round specific corners of a View?'
+    unanswerable: true
+  # https://stackoverflow.com/q/769683 (postgresql)
+  - question: 'How to show tables in PostgreSQL?'
+    unanswerable: true
+  # https://stackoverflow.com/q/109325 (postgresql)
+  - question: 'PostgreSQL "DESCRIBE TABLE"'
+    unanswerable: true
+  # https://stackoverflow.com/q/3800551 (postgresql)
+  - question: 'Select first row in each GROUP BY group?'
+    unanswerable: true
+  # https://stackoverflow.com/q/12720967 (postgresql)
+  - question: 'How can I change a PostgreSQL user password?'
+    unanswerable: true
+  # https://stackoverflow.com/q/9463318 (postgresql)
+  - question: 'How to exit from PostgreSQL command line utility: psql'
+    unanswerable: true

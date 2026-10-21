@@ -1,0 +1,355 @@
+# Questions about Astro asked on Stack Overflow under the astrojs tag, as their askers
+# titled them, each with the pages of Astro's English docs that its accepted answer (or a
+# maintainer's) links, at withastro/docs@3480e4b; and 15 off-topic questions from other tags.
+# The questions are Stack Overflow's, CC BY-SA 4.0: README.md in this folder credits and links
+# each one, and says how its pages were chosen. CI scores the file on every change.
+#
+#   node scripts/corpus.mjs .corpus astro
+#   ondocs index .corpus/astro/src/content/docs/en --framework starlight --base-url /en -e none -o astro.json
+#   ondocs eval test/eval/astro-title.yaml --index astro.json
+
+# Keyword-only, these docs score hit@1 10/95, hit@3 21/95, hit@5 22/95 and MRR 0.16,
+# refuse 8 of the 95 answerable questions, and answer 1 of the 15 off-topic ones. The
+# thresholds sit just under those scores: a change that loses a question fails CI, and has to
+# say why.
+thresholds:
+  hit@1: 0.1
+  hit@3: 0.22
+  hit@5: 0.23
+  mrr: 0.15
+  refusalPrecision: 0.63
+  refusalRecall: 0.93
+
+questions:
+  # https://stackoverflow.com/q/72682642
+  - question: 'Prismic asHtml() escapes HTML for rich text field in Astro'
+    expect: /en/reference/directives-reference
+  # https://stackoverflow.com/q/73382984
+  - question: 'How can I access the url query parameters from an Astro file (server side)?'
+    expect: [/en/guides/on-demand-rendering, /en/reference/api-reference]
+  # https://stackoverflow.com/q/73511984
+  - question: 'How do I pass a server variable to client side JS in astro?'
+    expect: [/en/reference/directives-reference, /en/recipes/sharing-state-islands]
+  # https://stackoverflow.com/q/73978567
+  - question: 'Astro Build Error, Markdown with Typescript'
+    expect: /en/guides/typescript
+  # https://stackoverflow.com/q/74058485
+  - question: 'Setting a default layout for all Markdown files'
+    expect: /en/guides/content-collections
+  # https://stackoverflow.com/q/74119829
+  - question: 'error: [astro preview] adapter does not have previewentrypoint'
+    expect: /en/reference/cli-reference
+  # https://stackoverflow.com/q/74126716
+  - question: 'How to self reference Astro component'
+    expect: /en/reference/api-reference
+  # https://stackoverflow.com/q/74142930
+  - question: 'Astro.js dynamic import'
+    expect: [/en/guides/on-demand-rendering, /en/reference/directives-reference]
+  # https://stackoverflow.com/q/74184132
+  - question: 'From a page in AstroJS [plugin:astro] location is not defined'
+    expect: /en/reference/api-reference
+  # https://stackoverflow.com/q/74398013
+  - question: 'How can I access the the Astro config values in a page?'
+    expect: /en/reference/api-reference
+  # https://stackoverflow.com/q/74489844
+  - question: 'Astro.js deployment: Media files not rendering'
+    expect: /en/reference/configuration-reference
+  # https://stackoverflow.com/q/74509302
+  - question: 'How to render double curly braces in Astro'
+    expect: /en/reference/directives-reference
+  # https://stackoverflow.com/q/74551923
+  - question: 'how to use lottie-react in astro build framework'
+    expect: /en/guides/integrations-guide/react
+  # https://stackoverflow.com/q/74578397
+  - question: 'Astro - react useEffect hook is not working'
+    expect: [/en/concepts/islands, /en/reference/directives-reference]
+  # https://stackoverflow.com/q/74781864
+  - question: 'How can I use Remark with Astro to make my posts written in markdown preserve the styling?'
+    expect: [/en/guides/markdown-content, /en/reference/directives-reference]
+  # https://stackoverflow.com/q/74784560
+  - question: 'How to share state among components in Astro?'
+    expect: /en/recipes/sharing-state-islands
+  # https://stackoverflow.com/q/74820110
+  - question: 'Why Vercel Web vitals is not loading for my Astro Project?'
+    expect: /en/guides/integrations-guide/vercel
+  # https://stackoverflow.com/q/74865122
+  - question: "What's the best way to pass markdown to an Astro component as a prop"
+    expect: /en/reference/directives-reference
+  # https://stackoverflow.com/q/74867054
+  - question: 'For Astro.js, how to access frontmatter variables in ld+json schema.org SEO JSON?'
+    expect: /en/reference/directives-reference
+  # https://stackoverflow.com/q/74875277
+  - question: 'OnClick event not working for React Component in Astro'
+    expect: /en/guides/framework-components
+  # https://stackoverflow.com/q/74888357
+  - question: 'Generate Astro index page as well as pagination'
+    expect: /en/guides/routing
+  # https://stackoverflow.com/q/74976824
+  - question: 'Can i pass props from a child component to parent in Astro?'
+    expect: /en/reference/api-reference
+  # https://stackoverflow.com/q/75120277
+  - question: 'Is there is way to preserve the state in astro'
+    expect: /en/recipes/sharing-state-islands
+  # https://stackoverflow.com/q/75136124
+  - question: 'AstroJS: Can I get a list of all pages withing a folder'
+    expect: /en/reference/api-reference
+  # https://stackoverflow.com/q/75371121
+  - question: 'Accept general HTML element props in TypeScript Astro component'
+    expect: /en/guides/typescript
+  # https://stackoverflow.com/q/75669794
+  - question: 'How would an Astro Endpoint (API route) look like converted from Next.js?'
+    expect: /en/guides/endpoints
+  # https://stackoverflow.com/q/75873894
+  - question: 'How can I insert a line break in an astro prop?'
+    expect: [/en/reference/directives-reference, /en/reference/astro-syntax]
+  # https://stackoverflow.com/q/75912035
+  - question: 'How to target this component in client script?'
+    expect: /en/reference/directives-reference
+  # https://stackoverflow.com/q/75933212
+  - question: 'Can I pass additional classes to an Astro component from parent?'
+    expect: /en/reference/directives-reference
+  # https://stackoverflow.com/q/75967594
+  - question: 'Astro.js dynamic routing'
+    expect: [/en/guides/routing, /en/recipes/i18n]
+  # https://stackoverflow.com/q/75971534
+  - question: 'Does Astro js fallback to SSR when cache is not available?'
+    expect: /en/guides/on-demand-rendering
+  # https://stackoverflow.com/q/75982296
+  - question: 'Get most recent posts from a blog built with Astro in a Single Page Application'
+    expect: /en/guides/endpoints
+  # https://stackoverflow.com/q/76026598
+  - question: 'Bundle code as a separate js file in Astro (astro.build, astrojs)'
+    expect: /en/guides/troubleshooting
+  # https://stackoverflow.com/q/76052260
+  - question: 'Import SVG file in Astro and use it without the <img /> tag'
+    expect: /en/reference/astro-syntax
+  # https://stackoverflow.com/q/76055053
+  - question: 'astro hydration strategy `client:only="react"` not working with react js'
+    expect: /en/guides/integrations-guide/react
+  # https://stackoverflow.com/q/76075624
+  - question: 'How to access clientAddress in Astro api routes?'
+    expect: /en/reference/api-reference
+  # https://stackoverflow.com/q/76124391
+  - question: 'Convert markdown to HTML in Astro'
+    expect: /en/guides/markdown-content
+  # https://stackoverflow.com/q/76169944
+  - question: 'How to use <Code> in an Astro project without getting: "Astro components cannot be rendered directly via function call"'
+    expect: /en/guides/framework-components
+  # https://stackoverflow.com/q/76322961
+  - question: 'PrelineUI plugin not working, causing a few components which uses JavaScript to not work'
+    expect: [/en/guides/client-side-scripts, /en/reference/directives-reference]
+  # https://stackoverflow.com/q/76414686
+  - question: 'Custom components in Markdown / MDX on Astro'
+    expect: [/en/guides/integrations-guide/mdx, /en/guides/markdown-content]
+  # https://stackoverflow.com/q/76433250
+  - question: 'Astro reference error when I follow the tutorial'
+    expect: [/en/tutorial/3-components/1, /en/basics/astro-components]
+  # https://stackoverflow.com/q/76541909
+  - question: 'Dynamically import/use images from collection markdown with Astro assets?'
+    expect: /en/guides/images
+  # https://stackoverflow.com/q/76559349
+  - question: 'Astro: bundle size before and after adding an UI framework'
+    expect: /en/reference/directives-reference
+  # https://stackoverflow.com/q/76573820
+  - question: 'React component in Astro cannot use the window object'
+    expect: /en/reference/directives-reference
+  # https://stackoverflow.com/q/76596751
+  - question: 'Calculating Read Time on Astro Blog'
+    expect: /en/guides/content-collections
+  # https://stackoverflow.com/q/76689933
+  - question: 'AstroJS - Pipeline build successful on GH-Pages but keep getting 404'
+    expect: /en/reference/configuration-reference
+  # https://stackoverflow.com/q/76699640
+  - question: 'How do I Deploy Astro SSR to Firebase Hosting'
+    expect: /en/guides/integrations-guide/node
+  # https://stackoverflow.com/q/76714410
+  - question: 'how to pass variable from frontmatter to script in Astro JS?'
+    expect: [/en/reference/directives-reference, /en/guides/client-side-scripts]
+  # https://stackoverflow.com/q/76864513
+  - question: 'How do I manipulate the props in a Astro component using the <script> tag?'
+    expect: [/en/guides/client-side-scripts, /en/guides/framework-components]
+  # https://stackoverflow.com/q/76870947
+  - question: 'Astro server endpoints with nodejs adapter has empty header'
+    expect: /en/guides/on-demand-rendering
+  # https://stackoverflow.com/q/76956129
+  - question: 'How can I import and use npm package in my Astro component?'
+    expect: /en/guides/client-side-scripts
+  # https://stackoverflow.com/q/76964906
+  - question: 'How do I use markdown imports in CSS (Astro)'
+    expect: [/en/reference/directives-reference, /en/guides/images]
+  # https://stackoverflow.com/q/76984863
+  - question: 'How can I force Astro to render my markdown with scoped classes within a component?'
+    expect: /en/guides/styling
+  # https://stackoverflow.com/q/76985138
+  - question: 'Any way to init an astro component by string?'
+    expect: /en/reference/astro-syntax
+  # https://stackoverflow.com/q/77151088
+  - question: 'How do I configure Astro to output separate CSS from HTML?'
+    expect: /en/guides/styling
+  # https://stackoverflow.com/q/77195518
+  - question: 'Google Tag Manager not appearing in page source'
+    expect: /en/reference/directives-reference
+  # https://stackoverflow.com/q/77249821
+  - question: 'Use ReactJs components in a tsx components in Astro'
+    expect: /en/reference/directives-reference
+  # https://stackoverflow.com/q/77252681
+  - question: 'Astro component how to render div based on prop value'
+    expect: /en/reference/astro-syntax
+  # https://stackoverflow.com/q/77269392
+  - question: 'Converting Ampersand from Wordpress Rest API in Astro dynamic routes'
+    expect: /en/reference/directives-reference
+  # https://stackoverflow.com/q/77412026
+  - question: 'How do I deploy an Astro SSR site with a NodeJS adapter to Azure Static Web Apps?'
+    expect: /en/reference/configuration-reference
+  # https://stackoverflow.com/q/77467545
+  - question: 'Astro React Tailwind and Shadcn-ui component not working correctly'
+    expect: /en/reference/directives-reference
+  # https://stackoverflow.com/q/77484231
+  - question: 'Pass a prop to CSS property in Astro'
+    expect: /en/reference/directives-reference
+  # https://stackoverflow.com/q/77508923
+  - question: "The argument 'path' must be a string, Uint8Array, or URL without null bytes. Received '\\x00@astro-page:astro/assets/endpoint/node' on Heroku deploy"
+    expect: /en/reference/directives-reference
+  # https://stackoverflow.com/q/77567458
+  - question: 'Astro.JS Display HTML from JSON data content'
+    expect: /en/reference/directives-reference
+  # https://stackoverflow.com/q/77643009
+  - question: 'AstroJs: Is it possible to have multiple returns inside getStaticPaths()?'
+    expect: /en/guides/content-collections
+  # https://stackoverflow.com/q/77662957
+  - question: 'Rendering Images on GitHub Pages with Astro'
+    expect: /en/reference/configuration-reference
+  # https://stackoverflow.com/q/77694181
+  - question: 'Insert frontmatter property in markdown body in Astro'
+    expect: [/en/guides/integrations-guide/mdx, /en/guides/markdown-content]
+  # https://stackoverflow.com/q/77797332
+  - question: 'How to modify/change data loaded in the frontmatter in Astro?'
+    expect: [/en/guides/client-side-scripts, /en/guides/framework-components]
+  # https://stackoverflow.com/q/77797490
+  - question: 'Issue with Loading Images on Vercel'
+    expect: /en/basics/project-structure
+  # https://stackoverflow.com/q/77870679
+  - question: 'Simple Typed.js And React.useEffect() Not Running in Astro Project'
+    expect: /en/guides/framework-components
+  # https://stackoverflow.com/q/77873296
+  - question: 'Astro.js - Pass dynamic variables to pagination'
+    expect: /en/guides/routing
+  # https://stackoverflow.com/q/77883883
+  - question: 'Specify where imported css will be injected in <head>'
+    expect: /en/guides/styling
+  # https://stackoverflow.com/q/77894014
+  - question: 'How to use React context in Astro. Minimal case'
+    expect: /en/recipes/sharing-state-islands
+  # https://stackoverflow.com/q/77940113
+  - question: "How to rename '/posts/' default posts location in Astro?"
+    expect: /en/guides/routing
+  # https://stackoverflow.com/q/77944059
+  - question: 'How to optimise a large image with Astro?'
+    expect: /en/guides/images
+  # https://stackoverflow.com/q/77967437
+  - question: 'How to add a simple onClick function callback to a astro component?'
+    expect: [/en/guides/client-side-scripts, /en/basics/astro-components]
+  # https://stackoverflow.com/q/78136972
+  - question: 'How can I deploy an Astro project to an Apache web server?'
+    expect: /en/guides/deploy
+  # https://stackoverflow.com/q/78142876
+  - question: 'How to Create Nested Routes and Indexes in Astro?'
+    expect: /en/tutorial/5-astro-api/3
+  # https://stackoverflow.com/q/78146752
+  - question: 'Getting ERROR using Astro and Shadcn UI Drawer component'
+    expect: /en/reference/directives-reference
+  # https://stackoverflow.com/q/78233538
+  - question: 'How to import a function into a script in Astro using TypeScript?'
+    expect: /en/guides/client-side-scripts
+  # https://stackoverflow.com/q/78263040
+  - question: 'HCaptcha event functions not triggering in AstroJS'
+    expect: /en/guides/framework-components
+  # https://stackoverflow.com/q/78310808
+  - question: "I'm struggling to add a p5.js sketch to my Astro website"
+    expect: /en/guides/client-side-scripts
+  # https://stackoverflow.com/q/78380204
+  - question: 'How can I check if a cookie existis in client-side with Astro?'
+    expect: /en/guides/client-side-scripts
+  # https://stackoverflow.com/q/78416872
+  - question: 'Resolving path to file in public folder with Astro'
+    expect: /en/basics/project-structure
+  # https://stackoverflow.com/q/78429760
+  - question: 'Custom Fragments in AstroJS'
+    expect: /en/basics/astro-components
+  # https://stackoverflow.com/q/78502996
+  - question: 'Paginate in SSR mode with Astrojs'
+    expect: /en/guides/routing
+  # https://stackoverflow.com/q/78526273
+  - question: 'How to access astro props inside a script tag?'
+    expect: /en/reference/directives-reference
+  # https://stackoverflow.com/q/78744685
+  - question: 'How to create use and html element prop to determine the element used by and Astro component'
+    expect: /en/reference/astro-syntax
+  # https://stackoverflow.com/q/79070125
+  - question: 'Attaching click event handlers in Astro pages'
+    expect: [/en/guides/view-transitions, /en/guides/client-side-scripts]
+  # https://stackoverflow.com/q/79073776
+  - question: 'Pass frontmatter variables to scripts using data-attribute and use in JavaScript Class'
+    expect: /en/guides/client-side-scripts
+  # https://stackoverflow.com/q/79159510
+  - question: 'Serverside Astro JS global variable'
+    expect: /en/basics/astro-components
+  # https://stackoverflow.com/q/79164532
+  - question: "React component within Astro is not working, can't access env variables"
+    expect: /en/guides/environment-variables
+  # https://stackoverflow.com/q/79216589
+  - question: 'How can I fetch data from server inside a .tsx component?'
+    expect: /en/guides/on-demand-rendering
+  # https://stackoverflow.com/q/79249046
+  - question: "What does `**\\/[^_]*.md^` in Astro glob() Match?"
+    expect: /en/guides/routing
+  # https://stackoverflow.com/q/79744063
+  - question: "Cannot find module 'canvas' using Konva in Astro"
+    expect: /en/reference/directives-reference
+
+  # Off-topic: the most-voted questions of three other tags.
+  # https://stackoverflow.com/q/8609192 (django)
+  - question: 'What is the difference between null=True and blank=True in Django?'
+    unanswerable: true
+  # https://stackoverflow.com/q/886221 (django)
+  - question: 'Has Django served an excess of 100k daily visits?'
+    unanswerable: true
+  # https://stackoverflow.com/q/687295 (django)
+  - question: 'How do I do a not equal in Django queryset filtering?'
+    unanswerable: true
+  # https://stackoverflow.com/q/13866926 (django)
+  - question: 'Is there a list of Pytz Timezones?'
+    unanswerable: true
+  # https://stackoverflow.com/q/15501673 (django)
+  - question: 'How can I temporarily disable a foreign key constraint in MySQL?'
+    unanswerable: true
+  # https://stackoverflow.com/q/2025282 (android)
+  - question: 'What is the difference between px, dip, dp, and sp?'
+    unanswerable: true
+  # https://stackoverflow.com/q/1109022 (android)
+  - question: 'How can I close/hide the Android soft keyboard programmatically?'
+    unanswerable: true
+  # https://stackoverflow.com/q/13375357 (android)
+  - question: 'Proper use cases for Android UserManager.isUserAGoat()?'
+    unanswerable: true
+  # https://stackoverflow.com/q/1554099 (android)
+  - question: 'Why is the Android emulator so slow? How can we speed up the Android emulator?'
+    unanswerable: true
+  # https://stackoverflow.com/q/1555109 (android)
+  - question: 'How can I stop EditText from gaining focus when an activity starts in Android?'
+    unanswerable: true
+  # https://stackoverflow.com/q/151005 (excel)
+  - question: 'How do I create an Excel (.XLS and .XLSX) file in C# without installing Microsoft Office?'
+    unanswerable: true
+  # https://stackoverflow.com/q/4212861 (excel)
+  - question: 'What is a correct MIME type for .docx, .pptx, etc.?'
+    unanswerable: true
+  # https://stackoverflow.com/q/158706 (excel)
+  - question: 'How do I properly clean up Excel interop objects?'
+    unanswerable: true
+  # https://stackoverflow.com/q/22542834 (excel)
+  - question: 'How to use Regular Expressions (Regex) in Microsoft Excel both in-cell and loops'
+    unanswerable: true
+  # https://stackoverflow.com/q/6002256 (excel)
+  - question: 'Is it possible to force Excel recognize UTF-8 CSV files automatically?'
+    unanswerable: true

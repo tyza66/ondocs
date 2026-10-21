@@ -34,7 +34,8 @@ jobs:
       - run: pnpm lint
       - run: pnpm format:check
       - run: pnpm typecheck
-      # docusaurus.io's own docs at a pinned commit, which test/corpus.test.ts searches.
+      # docusaurus.io's, Astro's and Vitest's docs at pinned commits, which test/corpus.test.ts,
+      # test/eval/real-questions.test.ts and the real-question evals below search.
       - name: Fetch the real-world docs corpus
         run: node scripts/corpus.mjs
       - run: pnpm test
@@ -64,6 +65,17 @@ jobs:
           grep -Eq '<link rel="alternate" type="text/markdown" href="[^"]*/docs/mcp\.md"' examples/nextjs/.next/server/app/docs/mcp.html
       - name: Score the website's retrieval with ondocs eval
         run: node dist/cli.js eval examples/nextjs/ask-eval.yaml
+      # Questions people asked on Stack Overflow, with the pages the accepted answers link
+      # (test/eval/README.md), keyword-only with no key: each file's thresholds sit just under
+      # today's scores, so a change that loses one fails here.
+      - name: Score real Stack Overflow questions about Docusaurus, Astro and Vitest, keyword-only
+        run: |
+          node dist/cli.js index .corpus/docusaurus/website/docs --framework docusaurus --base-url /docs -e none -o "$RUNNER_TEMP/docusaurus.json" -q
+          node dist/cli.js eval test/eval/docusaurus-title.yaml --index "$RUNNER_TEMP/docusaurus.json"
+          node dist/cli.js index .corpus/astro/src/content/docs/en --framework starlight --base-url /en -e none -o "$RUNNER_TEMP/astro.json" -q
+          node dist/cli.js eval test/eval/astro-title.yaml --index "$RUNNER_TEMP/astro.json"
+          node dist/cli.js index .corpus/vitest/docs --framework none --base-url / --ignore 'guide/examples/**' --ignore guide/cli-generated.md --ignore AGENTS.md -e none -o "$RUNNER_TEMP/vitest.json" -q
+          node dist/cli.js eval test/eval/vitest-title.yaml --index "$RUNNER_TEMP/vitest.json"
       - name: Lint the example app
         run: pnpm --filter ondocs-example-nextjs lint
       # The three examples are the live demos on Vercel: each is built as its vercel.json says,
